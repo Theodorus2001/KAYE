@@ -158,23 +158,4 @@ Beyond that, the ambition is for KAYE to become the platform Haitian schools use
 
 The reasoning throughout is that a system which genuinely works for one Haitian classroom is worth more than one which theoretically works for a thousand.
 
-## Further reading
 
-`KAYE-LMS-PRD.md` is the full product requirements document. It covers personas, scope by role, technical requirements for low bandwidth deployment, success metrics for the pilot, risks and mitigations, and the phased roadmap in more detail.
-
-## Files
-
-```
-index.html            The complete prototype, single file
-README.md             This document
-KAYE-LMS-PRD.md       Product requirements document
-kaye-logo-white.png   Transparent logo for dark backgrounds
-PUSH-TO-GITHUB.md     Deployment instructions
-LICENSE               MIT
-```
-
-## Licence
-
-Released under the MIT Licence. See `LICENSE`.
-
-Built for Haitian schools, starting with one classroom at Saint-François-Xavier.
