@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KAYE — Plateforme d'apprentissage</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: { colors: {
+    slatePrimary: '#0f172a', slateSecondary: '#475569', borderLight: '#e2e8f0',
+    kayeVioletLight: '#4C3C9C', kayeVioletDark: '#241B54', kayeOrange: '#FF6A45', kayeLine: '#C7C9D9'
+  } } }
+}
+</script>
+<style>
+  .sidebar-item { border-left: 3px solid transparent; transition: all .15s ease; }
+  .sidebar-item:hover { background-color: #f8fafc; color: #0f172a; }
+  .sidebar-item.active { background-color: rgba(76,60,156,0.08); color: #241B54; border-left-color: #4C3C9C; }
+  .lang-toggle-active { color: #241B54; background-color: rgba(76,60,156,0.08); border-radius: 6px; }
+  .subtab-active { color: #241B54; border-bottom: 2px solid #4C3C9C; }
+  .toggle-track::after { content:''; position:absolute; top:2px; left:2px; background:#fff; border-radius:9999px; height:16px; width:16px; transition:all .15s ease; }
+  .toggle-input:checked + .toggle-track { background-color:#4C3C9C; }
+  .toggle-input:checked + .toggle-track::after { transform: translateX(20px); }
+  .msg-student { background:#4C3C9C; color:#fff; border-radius:14px 14px 2px 14px; }
+  .msg-teacher { background:#f1f5f9; color:#0f172a; border-radius:14px 14px 14px 2px; }
+  .cal-day:hover { background:#f8fafc; }
+  .fade-in { animation: fadeIn .25s ease; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(4px);} to {opacity:1; transform:none;} }
+  .mark { background:#FFE8B0; }
+  .role-tab { color:#ffffffb3; }
+  .role-tab.active { background:#fff; color:#241B54; box-shadow:0 1px 2px rgba(0,0,0,.06); }
+  .roster-row.active { background:rgba(76,60,156,.08); border-left:3px solid #4C3C9C; }
+  .roster-row { border-left:3px solid transparent; }
+</style>
+</head>
+<body class="bg-white text-slatePrimary font-sans antialiased">
+
+<!-- ==================== ÉCRAN DE CONNEXION ==================== -->
+<div id="screen-login" class="min-h-screen bg-kayeVioletDark relative overflow-hidden flex flex-col">
+  <svg class="absolute -right-24 -bottom-24 opacity-10 pointer-events-none" width="520" height="520" viewBox="0 0 200 200">
+    <polygon points="100,38 38,172 97,172" fill="#fff"/><polygon points="100,38 103,172 162,172" fill="#fff"/>
+  </svg>
+  <div class="flex justify-end px-6 lg:px-10 py-6 relative z-10">
+    <div class="flex items-center space-x-1 border border-white/20 rounded-lg px-1 py-1">
+      <button onclick="setLanguage('fr')" id="login-lang-fr" class="px-3 py-1.5 text-xs font-bold rounded-md bg-white text-kayeVioletDark">FR</button>
+      <button onclick="setLanguage('ht')" id="login-lang-ht" class="px-3 py-1.5 text-xs font-bold text-white/70 hover:text-white">KREYÒL</button>
+    </div>
+  </div>
+  <div class="flex-1 flex flex-col items-center justify-center px-6 pb-12 relative z-10">
+    <img src="data:image/png;base64,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" alt="KAYE" class="h-16 w-auto mb-9"/>
+    <div class="w-full max-w-sm bg-white rounded-2xl shadow-xl p-8">
+      <div class="flex bg-kayeVioletDark rounded-lg p-1 mb-7">
+        <button onclick="setRole('student')" id="role-student" class="role-tab active flex-1 text-xs font-bold py-2 rounded-md transition"><span class="lang-fr">Étudiant</span><span class="lang-ht hidden">Elèv</span></button>
+        <button onclick="setRole('teacher')" id="role-teacher" class="role-tab flex-1 text-xs font-bold py-2 rounded-md transition"><span class="lang-fr">Enseignant</span><span class="lang-ht hidden">Pwofesè</span></button>
+        <button onclick="setRole('admin')" id="role-admin" class="role-tab flex-1 text-xs font-bold py-2 rounded-md transition"><span class="lang-fr">Admin</span><span class="lang-ht hidden">Admin</span></button>
+      </div>
+      <div id="login-form-view">
+        <h2 class="text-xl font-black mb-1"><span class="lang-fr">Bon retour !</span><span class="lang-ht hidden">Byenveni ankò !</span></h2>
+        <p class="text-sm text-slateSecondary mb-6"><span class="lang-fr">Accédez à vos cours, devoirs et notes.</span><span class="lang-ht hidden">Antre nan klas, devwa ak nòt ou yo.</span></p>
+        <form onsubmit="return doLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slateSecondary mb-1"><span class="lang-fr">Email</span><span class="lang-ht hidden">Imel</span></label>
+            <input id="login-email" type="text" required placeholder="nom@votre-ecole.edu" class="w-full px-3 py-2.5 border border-borderLight rounded-lg text-sm focus:outline-none focus:border-kayeVioletLight"/>
+          </div>
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="block text-xs font-bold text-slateSecondary"><span class="lang-fr">Mot de passe</span><span class="lang-ht hidden">Modpas</span></label>
+              <button type="button" onclick="showLoginView('reset')" class="text-xs font-semibold text-kayeVioletLight"><span class="lang-fr">Mot de passe oublié ?</span><span class="lang-ht hidden">Bliye modpas ?</span></button>
+            </div>
+            <input id="login-pass" type="password" required placeholder="••••••••" class="w-full px-3 py-2.5 border border-borderLight rounded-lg text-sm focus:outline-none focus:border-kayeVioletLight"/>
+          </div>
+          <label class="flex items-center space-x-2 text-xs text-slateSecondary">
+            <input type="checkbox" checked class="rounded border-borderLight text-kayeVioletLight"/>
+            <span><span class="lang-fr">Se souvenir de moi</span><span class="lang-ht hidden">Sonje m</span></span>
+          </label>
+          <button type="submit" class="w-full py-2.5 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-sm transition"><span class="lang-fr">Se connecter</span><span class="lang-ht hidden">Konekte</span></button>
+        </form>
+        <div class="flex items-center my-5"><div class="flex-1 h-px bg-borderLight"></div><span class="px-3 text-xs text-slateSecondary">ou</span><div class="flex-1 h-px bg-borderLight"></div></div>
+        <button onclick="doLogin(null)" class="w-full py-2.5 rounded-lg border border-borderLight hover:border-kayeVioletLight font-bold text-sm transition flex items-center justify-center space-x-2">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 0h10.5A1.5 1.5 0 0118.75 12v7.5a1.5 1.5 0 01-1.5 1.5h-10.5A1.5 1.5 0 015.25 19.5V12a1.5 1.5 0 011.5-1.5z"/></svg>
+          <span><span class="lang-fr">Compte de l'établissement</span><span class="lang-ht hidden">Kont lekòl la</span></span>
+        </button>
+        <p class="text-center text-xs text-slateSecondary mt-6">
+          <span class="lang-fr">Pas encore de compte ?</span><span class="lang-ht hidden">Ou poko gen kont ?</span>
+          <button onclick="showLoginView('signup')" class="font-bold text-kayeVioletLight"><span class="lang-fr">Créer un compte</span><span class="lang-ht hidden">Kreye yon kont</span></button>
+        </p>
+      </div>
+      <div id="login-reset-view" class="hidden">
+        <button onclick="showLoginView('form')" class="text-xs font-bold text-slateSecondary mb-4">← <span class="lang-fr">Retour</span><span class="lang-ht hidden">Retounen</span></button>
+        <h2 class="text-xl font-black mb-1"><span class="lang-fr">Réinitialiser le mot de passe</span><span class="lang-ht hidden">Chanje modpas</span></h2>
+        <p class="text-sm text-slateSecondary mb-6"><span class="lang-fr">Entrez votre email pour recevoir un lien.</span><span class="lang-ht hidden">Mete imel ou pou resevwa yon lyen.</span></p>
+        <form onsubmit="event.preventDefault(); toast('Lien de réinitialisation envoyé.'); showLoginView('form');" class="space-y-4">
+          <input type="email" required placeholder="nom@votre-ecole.edu" class="w-full px-3 py-2.5 border border-borderLight rounded-lg text-sm focus:outline-none focus:border-kayeVioletLight"/>
+          <button type="submit" class="w-full py-2.5 rounded-lg bg-kayeVioletLight text-white font-bold text-sm"><span class="lang-fr">Envoyer le lien</span><span class="lang-ht hidden">Voye lyen an</span></button>
+        </form>
+      </div>
+      <div id="login-signup-view" class="hidden">
+        <button onclick="showLoginView('form')" class="text-xs font-bold text-slateSecondary mb-4">← <span class="lang-fr">Retour</span><span class="lang-ht hidden">Retounen</span></button>
+        <h2 class="text-xl font-black mb-1"><span class="lang-fr">Créer un compte</span><span class="lang-ht hidden">Kreye yon kont</span></h2>
+        <p class="text-sm text-slateSecondary mb-6"><span class="lang-fr">Utilisez le code fourni par votre école.</span><span class="lang-ht hidden">Sèvi ak kòd lekòl ou ba ou a.</span></p>
+        <form onsubmit="return doLogin(event)" class="space-y-4">
+          <input type="text" required placeholder="Prénom et nom" class="w-full px-3 py-2.5 border border-borderLight rounded-lg text-sm focus:outline-none focus:border-kayeVioletLight"/>
+          <input type="email" required placeholder="nom@votre-ecole.edu" class="w-full px-3 py-2.5 border border-borderLight rounded-lg text-sm focus:outline-none focus:border-kayeVioletLight"/>
+          <input type="text" required placeholder="Code d'établissement" class="w-full px-3 py-2.5 border border-borderLight rounded-lg text-sm focus:outline-none focus:border-kayeVioletLight"/>
+          <input type="password" required placeholder="Mot de passe" class="w-full px-3 py-2.5 border border-borderLight rounded-lg text-sm focus:outline-none focus:border-kayeVioletLight"/>
+          <button type="submit" class="w-full py-2.5 rounded-lg bg-kayeVioletLight text-white font-bold text-sm"><span class="lang-fr">Créer mon compte</span><span class="lang-ht hidden">Kreye kont mwen</span></button>
+        </form>
+      </div>
+    </div>
+    <p class="text-[11px] text-white/40 mt-6">Démo — n'importe quel email et mot de passe fonctionne.</p>
+  </div>
+</div>
+
+<!-- ==================== APPLICATION ==================== -->
+<div id="screen-app" class="hidden h-screen overflow-hidden flex">
+  <aside class="w-64 bg-white border-r border-borderLight flex flex-col justify-between h-full shrink-0">
+    <div class="overflow-y-auto">
+      <div class="p-6 border-b border-borderLight">
+        <div class="flex items-center space-x-3 mb-2">
+          <svg class="h-9 w-9 shrink-0" viewBox="0 0 200 200">
+            <polygon points="100,38 38,172 97,172" fill="#4C3C9C"/><polygon points="100,38 103,172 162,172" fill="#241B54"/>
+            <rect x="93" y="55" width="5" height="120" fill="#C7C9D9"/><rect x="22" y="97" width="156" height="17" rx="8.5" fill="#FF6A45"/>
+            <circle cx="100" cy="36" r="14" fill="#FF6A45"/>
+          </svg>
+          <span class="text-lg font-black tracking-widest">KAYE</span>
+        </div>
+        <div class="inline-flex items-center space-x-1.5 px-2 py-1 rounded bg-slate-100 text-[11px] font-bold text-slateSecondary uppercase">
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span><span id="school-tag">Institution : SFXO</span>
+        </div>
+        <div id="role-tag" class="mt-2 inline-flex items-center px-2 py-1 rounded bg-kayeVioletLight/10 text-[11px] font-bold text-kayeVioletDark uppercase tracking-wide">Espace étudiant</div>
+      </div>
+      <nav class="p-3 space-y-0.5" id="main-nav"></nav>
+    </div>
+    <div class="p-4 border-t border-borderLight flex items-center space-x-3 bg-slate-50 shrink-0">
+      <div id="me-avatar" class="h-9 w-9 rounded-full bg-kayeVioletLight text-white font-bold flex items-center justify-center text-xs">PD</div>
+      <div class="overflow-hidden flex-1">
+        <span id="me-name" class="block text-xs font-bold truncate">Pam Doe</span>
+        <span id="me-id" class="block text-[10px] text-slateSecondary font-mono truncate">SFXO-2026-09</span>
+      </div>
+      <button onclick="doLogout()" title="Déconnexion" class="text-slateSecondary hover:text-rose-500">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <div class="flex-1 flex flex-col h-full overflow-hidden">
+    <header class="h-16 border-b border-borderLight px-6 flex items-center justify-between shrink-0 gap-4">
+      <span id="breadcrumb" class="text-xs font-bold tracking-widest text-slateSecondary uppercase truncate">Saint-François-Xavier (SFXO)</span>
+      <div class="flex items-center gap-3 shrink-0">
+        <div class="relative hidden md:block">
+          <input id="global-search" oninput="runGlobalSearch(this.value)" onfocus="runGlobalSearch(this.value)" type="text" placeholder="Rechercher…" class="w-56 pl-8 pr-3 py-1.5 border border-borderLight rounded-lg text-xs focus:outline-none focus:border-kayeVioletLight"/>
+          <svg class="h-4 w-4 absolute left-2.5 top-2 text-slateSecondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-5.2-5.2M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <div id="search-results" class="hidden absolute right-0 mt-1 w-80 bg-white border border-borderLight rounded-xl shadow-lg z-40 max-h-80 overflow-y-auto"></div>
+        </div>
+        <button onclick="toggleNotifications()" class="relative p-2 rounded-lg hover:bg-slate-100">
+          <svg class="h-5 w-5 text-slateSecondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>
+          <span id="notif-dot" class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-kayeOrange"></span>
+        </button>
+        <div class="flex items-center space-x-1 border border-borderLight rounded-lg px-1 py-1">
+          <button onclick="setLanguage('fr')" id="lang-btn-fr" class="lang-toggle-active px-2.5 py-1 text-xs font-bold text-slateSecondary">FR</button>
+          <button onclick="setLanguage('ht')" id="lang-btn-ht" class="px-2.5 py-1 text-xs font-bold text-slateSecondary">KREYÒL</button>
+        </div>
+      </div>
+    </header>
+    <div class="h-1 w-full bg-gradient-to-r from-kayeVioletLight via-kayeOrange to-kayeVioletDark shrink-0"></div>
+
+    <div id="notif-panel" class="hidden absolute right-6 top-20 w-80 bg-white border border-borderLight rounded-xl shadow-lg z-40 max-h-96 overflow-y-auto"></div>
+
+    <main id="page" class="flex-1 overflow-y-auto"></main>
+  </div>
+</div>
+
+<div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-slatePrimary text-white text-sm px-4 py-2.5 rounded-lg shadow-lg z-50"></div>
+
+<script>
+/* ========== ÉTAT ET DONNÉES ========== */
+let LANG = 'fr';
+const T = {
+  dashboard:['Tableau de bord','Tablo'], courses:['Cours','Klas yo'], assignments:['Devoirs','Devwa'],
+  grades:['Notes','Nòt yo'], calendar:['Calendrier','Kalandriye'], inbox:['Messagerie','Mesaj'],
+  discussions:['Forums','Fowòm'], announcements:['Annonces','Anons'], library:['Bibliothèque','Bibliyotèk'],
+  settings:['Paramètres','Anviwònman'],
+  todo:['À faire','Pou fè'], activity:['Activité récente','Aktivite resan'],
+  activeCourses:['Cours actifs','Klas aktif'], dueSoon:['Devoirs à rendre','Devwa pou remèt'],
+  avgProgress:['Progression moyenne','Pwogrè mwayèn'], unread:['Messages non lus','Mesaj ou poko li'],
+  syllabus:['Syllabus','Silabis'], modules:['Modules','Modil'], quizzes:['Quiz','Quiz'],
+  people:['Participants','Patisipan'], back:['Retour','Retounen'], open:['Ouvrir','Louvri'],
+  submit:['Soumettre','Voye'], download:['Télécharger','Telechaje'], send:['Envoyer','Voye'],
+  gradeNow:['Note actuelle','Nòt kounye a'], overallGpa:['Moyenne générale','Mwayèn jeneral'],
+  points:['points','pwen'], correct:['Correct !','Kòrèk !'], incorrect:['Incorrect','Pa kòrèk'],
+  feedback:["Feedback de l'enseignant",'Kòmantè pwofesè a'], instructions:['Instructions','Enstriksyon'],
+  attempts:['Tentatives','Eseye'], start:['Commencer','Kòmanse'], retry:['Réessayer','Eseye ankò'],
+  earned:['Obtenu','Genyen'], locked:['À débloquer','Poko genyen'], reply:['Répondre','Reponn'],
+  replies:['réponses','repons'], newPost:['Nouveau sujet','Nouvo sijè'], noItems:['Rien pour le moment.','Anyen pou kounye a.'],
+  grading:['Correction','Korije'], gradebook:['Carnet de notes','Kanè nòt'], liveClass:['Classe en direct','Klas an dirèk'],
+  aiAssist:['Assistant IA','Asistan IA'], analytics:['Analytique','Analitik'], users:['Utilisateurs','Itilizatè'],
+  enrollments:['Inscriptions','Enskripsyon'], reports:['Rapports','Rapò'], integrations:['Intégrations','Entegrasyon'],
+  system:['Système','Sistèm'], roster:['Liste des élèves','Lis elèv yo'], atRisk:['Élèves à risque','Elèv an difikilte'],
+  toGrade:['À corriger','Pou korije'], saveNext:['Enregistrer et suivant','Anrejistre epi swivan']
+};
+function t(k){ return (T[k]||['',''])[LANG==='fr'?0:1]; }
+
+const STUDENT = { name:'Pam Doe', initials:'PD', id:'SFXO-2026-09', email:'pam.doe@sfxo.edu.ht' };
+
+const COURSES = {
+  maths: {
+    title:'Mathématiques Générales', prof:'Dr. Jean-Baptiste', code:'MATH-102', grade:'A-', pct:88, progress:75,
+    tint:'violet', room:'Salle 12', schedule:'Lun · Mer · Ven — 08h00',
+    icon:'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3l9 18H3L12 3z"/><circle cx="12" cy="14" r="2.4" stroke-width="1.8"/>',
+    description:"Algèbre, fonctions, limites et introduction au calcul différentiel. Cours de base obligatoire du semestre.",
+    modules:[
+      { title:'Module 1 : Fondations', weeks:'Semaines 1–4', done:true, items:[
+        {type:'page', name:'Lecture : rappels d’algèbre'}, {type:'video', name:'Vidéo : les fonctions affines', dur:'6 min'}, {type:'quiz', name:'Quiz 1 : Algèbre'} ]},
+      { title:'Module 2 : Dérivées et limites', weeks:'Semaines 5–8', done:false, items:[
+        {type:'video', name:'Vidéo : comprendre les dérivées', dur:'5 min'}, {type:'page', name:'Fiche : règles de dérivation'}, {type:'assignment', name:'Devoir #4 : Bases du calcul'} ]},
+      { title:'Module 3 : Applications', weeks:'Semaines 9–12', done:false, locked:true, items:[
+        {type:'page', name:'Taux de variation'}, {type:'quiz', name:'Quiz final'} ]}
+    ],
+    video:{ title:'Comprendre les dérivées en 5 minutes', dur:'5 min' },
+    people:['Jean Michel','Marc Antoine','Widlene Charles','Fabrice Similien'],
+    quizzes:[
+      { id:'mq1', title:'Quiz express : Dérivées', pts:5, attemptsAllowed:3, attemptsUsed:0, questions:[
+        { kind:'num', q:'Quelle est la dérivée de f(x) = x² en x = 3 ?', a:6 },
+        { kind:'mc', q:'Quelle règle sert à dériver un produit de fonctions ?', choices:['Règle de la chaîne','Règle du produit','Règle du quotient'], a:1 }
+      ]}
+    ],
+    assignments:[
+      { id:'ma4', title:'Devoir #4 : Bases du Calcul', due:'2026-08-04', dueLabel:'Dû dans 4h', pts:20, status:'todo',
+        instructions:'Résolvez les problèmes 1 à 12 du chapitre 3 (dérivées et limites). Montrez toutes les étapes de calcul. Soumettez un seul fichier PDF, scanné ou tapé.' },
+      { id:'ma3', title:'Devoir #3 : Fonctions affines', due:'2026-07-20', dueLabel:'Rendu le 20 juillet', pts:20, status:'graded', score:17,
+        instructions:'Tracer et analyser 6 fonctions affines à partir de leurs équations.',
+        feedback:'Bon travail global — attention à la question 4, la pente n’était pas correctement calculée. Continue comme ça !',
+        rubric:[{c:'Exactitude des calculs',s:7,m:8},{c:'Méthode et démarche',s:5,m:6},{c:'Présentation',s:5,m:6}] }
+    ],
+    assessments:[ {name:'Quiz 1 : Algèbre',date:'8 Fév',score:18,max:20},{name:'Devoir #2 : Fonctions',date:'25 Fév',score:16,max:20},{name:'Examen Mi-Semestre',date:'15 Mars',score:19,max:20},{name:'Devoir #3 : Fonctions affines',date:'20 Juil',score:17,max:20} ],
+    discussions:[ { id:'md1', title:'Question sur l’exercice 7 du chapitre 3', author:'Jean Michel', when:'il y a 2 jours', body:'Je ne comprends pas pourquoi la limite tend vers 0 ici. Quelqu’un peut expliquer ?', replies:[ {author:'Dr. Jean-Baptiste', body:'Bonne question — regarde la vidéo du Module 2 à 3:20, j’y explique exactement ce cas.', when:'il y a 1 jour'}, {author:'Widlene Charles', body:'Merci, ça m’aide aussi !', when:'il y a 20h'} ] } ]
+  },
+  francais: {
+    title:'Français Avancé', prof:'Mme Pierre', code:'FR-101', grade:'B+', pct:79, progress:68,
+    tint:'orange', room:'Salle 4', schedule:'Mar · Jeu — 10h00',
+    icon:'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6.042A8.967 8.967 0 006 4c-1.052 0-2.062.18-3 .512v14A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14a8.988 8.988 0 00-3-.512c-2.305 0-4.408.867-6 2.292m0-14.25v14.25"/>',
+    description:"Analyse littéraire, dissertation argumentative et maîtrise de la langue écrite.",
+    modules:[
+      { title:'Module 1 : Analyse de texte', weeks:'Semaines 1–4', done:true, items:[{type:'page',name:'Méthode d’analyse'},{type:'video',name:'Vidéo : lire un poème',dur:'7 min'}]},
+      { title:'Module 2 : La dissertation', weeks:'Semaines 5–8', done:false, items:[{type:'video',name:'Introduction à la dissertation argumentative',dur:'8 min'},{type:'assignment',name:'Dissertation : L’identité culturelle'}]}
+    ],
+    video:{ title:'Introduction à la dissertation argumentative', dur:'8 min' },
+    people:['Jean Michel','Sophia Laurent','Nadège Joseph'],
+    quizzes:[ { id:'fq1', title:'Quiz : Accords du participe passé', pts:5, attemptsAllowed:2, attemptsUsed:0, questions:[
+      { kind:'num', q:'Combien de règles principales régissent l’accord du participe passé avec « avoir » ? (nombre)', a:2 },
+      { kind:'mc', q:'« Les fleurs que j’ai cueillies » — pourquoi l’accord ?', choices:['COD placé avant le verbe','Sujet féminin pluriel','Auxiliaire être'], a:0 } ]} ],
+    assignments:[ { id:'fa1', title:'Dissertation : L’identité culturelle', due:'2026-08-04', dueLabel:'Dû demain', pts:20, status:'todo',
+      instructions:'Rédigez une dissertation de 500 mots sur le thème de l’identité culturelle haïtienne. Citez au moins deux sources vues dans le Module 1. Soumission au format PDF uniquement.' } ],
+    assessments:[ {name:'Devoir #1 : Analyse de texte',date:'12 Fév',score:15,max:20},{name:'Examen Partiel',date:'2 Mars',score:17,max:20},{name:'Devoir #2 : Poésie',date:'20 Mars',score:14,max:20} ],
+    discussions:[ { id:'fd1', title:'Vos auteurs haïtiens préférés ?', author:'Mme Pierre', when:'il y a 4 jours', body:'Partagez un auteur haïtien qui vous a marqué et pourquoi.', replies:[ {author:'Sophia Laurent', body:'Jacques Roumain, pour “Gouverneurs de la rosée”.', when:'il y a 3 jours'} ] } ]
+  },
+  physique: {
+    title:'Physique Fondamentale', prof:'Prof. Charles', code:'PHYS-201', grade:'A+', pct:96, progress:90,
+    tint:'violet', room:'Labo 2', schedule:'Mer · Ven — 13h00',
+    icon:'<circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><ellipse cx="12" cy="12" rx="9" ry="3.6" stroke-width="1.6"/><ellipse cx="12" cy="12" rx="9" ry="3.6" stroke-width="1.6" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="3.6" stroke-width="1.6" transform="rotate(120 12 12)"/>',
+    description:"Mécanique classique, cinématique et travaux de laboratoire.",
+    modules:[ { title:'Module 1 : Cinématique', weeks:'Semaines 1–5', done:true, items:[{type:'video',name:'La chute libre expliquée',dur:'6 min'},{type:'quiz',name:'Quiz : Cinématique'}]},
+      { title:'Module 2 : Laboratoire', weeks:'Semaines 6–10', done:false, items:[{type:'assignment',name:'Laboratoire : Chute libre'}]} ],
+    video:{ title:'La chute libre expliquée simplement', dur:'6 min' },
+    people:['Sophia Laurent','Nadège Joseph','Marc Antoine'],
+    quizzes:[ { id:'pq1', title:'Quiz : Chute libre', pts:5, attemptsAllowed:3, attemptsUsed:0, questions:[
+      { kind:'num', q:'Un objet tombe pendant 2 s (g = 10 m/s²). Quelle est sa vitesse en m/s ?', a:20 },
+      { kind:'mc', q:'En chute libre sans frottement, la masse influence-t-elle l’accélération ?', choices:['Oui','Non','Seulement dans le vide'], a:1 } ]} ],
+    assignments:[ { id:'pa1', title:'Laboratoire : Chute libre', due:'2026-08-07', dueLabel:'Dû vendredi', pts:20, status:'todo',
+      instructions:'Complétez le rapport de laboratoire : données brutes, calculs d’accélération et graphique vitesse-temps.' } ],
+    assessments:[ {name:'Laboratoire #1',date:'10 Fév',score:20,max:20},{name:'Devoir #1 : Mécanique',date:'28 Fév',score:19,max:20},{name:'Quiz : Cinématique',date:'18 Mars',score:18,max:20} ],
+    discussions:[]
+  },
+  chimie: {
+    title:'Chimie Organique', prof:'Dr. Alexis', code:'CHEM-101', grade:'B', pct:71, progress:54,
+    tint:'orange', room:'Labo 1', schedule:'Lun · Jeu — 15h00',
+    icon:'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3h6M10 3v5.5L4.8 18a1.6 1.6 0 001.4 2.4h11.6a1.6 1.6 0 001.4-2.4L14 8.5V3"/><path stroke-linecap="round" stroke-width="1.8" d="M8 15h8"/>',
+    description:"Nomenclature, liaisons et mécanismes réactionnels de base.",
+    modules:[ { title:'Module 1 : Nomenclature', weeks:'Semaines 1–4', done:true, items:[{type:'page',name:'Règles de nomenclature'}]},
+      { title:'Module 2 : Réactions', weeks:'Semaines 5–9', done:false, items:[{type:'video',name:'Les réactions organiques de base',dur:'7 min'},{type:'assignment',name:'Exercice : Réactions organiques'}]} ],
+    video:{ title:'Les réactions organiques de base', dur:'7 min' },
+    people:['Widlene Charles','Fabrice Similien','Jean Michel'],
+    quizzes:[ { id:'cq1', title:'Quiz : Nombre d’Avogadro', pts:5, attemptsAllowed:3, attemptsUsed:0, questions:[
+      { kind:'num', q:'Combien de moles dans 12,04 × 10²³ molécules ? (nombre entier)', a:2 } ]} ],
+    assignments:[ { id:'ca1', title:'Exercice : Réactions organiques', due:'2026-08-10', dueLabel:'Dû lundi prochain', pts:20, status:'todo',
+      instructions:'Identifiez les produits des 5 réactions données en annexe. Expliquez le mécanisme pour au moins deux d’entre elles.' } ],
+    assessments:[ {name:'Devoir #1 : Nomenclature',date:'14 Fév',score:13,max:20},{name:'Quiz : Liaisons',date:'3 Mars',score:12,max:20},{name:'Laboratoire : Titration',date:'22 Mars',score:14,max:20} ],
+    discussions:[]
+  }
+};
+
+const CONVOS = {
+  maths:{ name:'Dr. Jean-Baptiste', course:'Mathématiques Générales', initials:'JB', msgs:[
+    {from:'teacher', text:'Bonjour Pam, ton devoir #3 a été corrigé — regarde le feedback dans l’onglet Devoirs.', unread:true},
+    {from:'teacher', text:'N’oublie pas le Devoir #4 qui est dû aujourd’hui.', unread:true} ]},
+  francais:{ name:'Mme Pierre', course:'Français Avancé', initials:'MP', msgs:[
+    {from:'student', text:'Bonjour Mme Pierre, puis-je avoir un délai pour la dissertation ?', unread:false},
+    {from:'teacher', text:'Bonjour Pam, je t’accorde 24h de plus. Bon courage !', unread:false} ]},
+  physique:{ name:'Prof. Charles', course:'Physique Fondamentale', initials:'PC', msgs:[
+    {from:'teacher', text:'Excellent travail sur le laboratoire de chute libre !', unread:false} ]},
+  chimie:{ name:'Dr. Alexis', course:'Chimie Organique', initials:'DA', msgs:[
+    {from:'teacher', text:'Rappel : ton exercice sur les réactions organiques est dû lundi.', unread:false} ]}
+};
+
+const ANNOUNCEMENTS = [
+  { title:'Réunion de parents le 15 août', from:'Direction SFXO', when:'2 août', body:'La réunion trimestrielle des parents aura lieu le 15 août à 9h dans la grande salle. La présence d’un tuteur est requise.' },
+  { title:'Fermeture de la bibliothèque samedi', from:'Direction SFXO', when:'31 juillet', body:'La bibliothèque sera fermée samedi pour inventaire. Les emprunts reprennent lundi.' },
+  { title:'Nouveau module publié en Mathématiques', from:'Dr. Jean-Baptiste', when:'29 juillet', body:'Le Module 2 (Dérivées et limites) est maintenant disponible avec la vidéo et la fiche de règles.' }
+];
+
+const LIBRARY = [
+  { name:'syllabus_math102.pdf', course:'Mathématiques Générales', kind:'pdf', size:'240 Ko' },
+  { name:'chapitre3_derivees.pdf', course:'Mathématiques Générales', kind:'pdf', size:'1,2 Mo' },
+  { name:'methode_dissertation.pdf', course:'Français Avancé', kind:'pdf', size:'180 Ko' },
+  { name:'video_chute_libre.mp4', course:'Physique Fondamentale', kind:'video', size:'32 Mo' },
+  { name:'regles_nomenclature.pdf', course:'Chimie Organique', kind:'pdf', size:'310 Ko' }
+];
+
+
+const NOTIFS = [
+  { text:'Note publiée : Physique — Laboratoire #1 (20/20)', when:'il y a 1h', unread:true, go:()=>go('grades') },
+  { text:'Nouveau message de Dr. Jean-Baptiste', when:'il y a 3h', unread:true, go:()=>{ go('inbox'); openConvo('maths'); } },
+  { text:'Rappel : Devoir #4 de Mathématiques dû dans 4h', when:'il y a 5h', unread:true, go:()=>{ openAssignment('maths','ma4'); } },
+  { text:'Annonce : réunion de parents le 15 août', when:'hier', unread:false, go:()=>go('announcements') }
+];
+
+/* ===== DONNÉES ENSEIGNANT ===== */
+const TEACHER = { name:'Dr. Jean-Baptiste', initials:'JB', id:'SFXO — Enseignant', email:'jbaptiste@sfxo.edu.ht', courses:['maths'] };
+const ADMIN = { name:'Mme Étienne', initials:'ME', id:'SFXO — Direction', email:'direction@sfxo.edu.ht' };
+
+const ROSTER = {
+  maths:[
+    { name:'Pam Doe', ini:'PD', avg:88, submitted:true, file:'devoir4_pamdoe.pdf', score:null, risk:false, attendance:96 },
+    { name:'Jean Michel', ini:'JM', avg:74, submitted:true, file:'devoir4_jmichel.pdf', score:null, risk:false, attendance:88 },
+    { name:'Sophia Laurent', ini:'SL', avg:94, submitted:true, file:'devoir4_slaurent.pdf', score:18, risk:false, attendance:99 },
+    { name:'Marc Antoine', ini:'MA', avg:52, submitted:false, file:null, score:null, risk:true, attendance:61 },
+    { name:'Widlene Charles', ini:'WC', avg:81, submitted:true, file:'devoir4_wcharles.pdf', score:null, risk:false, attendance:92 },
+    { name:'Fabrice Similien', ini:'FS', avg:58, submitted:false, file:null, score:null, risk:true, attendance:70 }
+  ]
+};
+const GB_COLS = ['Quiz 1','Devoir #2','Examen Mi-Sem.','Devoir #3','Devoir #4'];
+const GB = {
+  'Pam Doe':[18,16,19,17,null], 'Jean Michel':[15,14,16,13,null], 'Sophia Laurent':[19,18,20,19,18],
+  'Marc Antoine':[12,null,10,8,null], 'Widlene Charles':[16,17,17,15,null], 'Fabrice Similien':[13,11,12,null,null]
+};
+const RUBRIC = [ {c:'Exactitude des calculs',m:8}, {c:'Méthode et démarche',m:6}, {c:'Présentation et clarté',m:6} ];
+
+/* ===== DONNÉES ADMINISTRATION ===== */
+const USERS = [
+  { name:'Pam Doe', role:'Étudiant', email:'pam.doe@sfxo.edu.ht', id:'SFXO-2026-09', status:'actif', last:'il y a 2h' },
+  { name:'Jean Michel', role:'Étudiant', email:'j.michel@sfxo.edu.ht', id:'SFXO-2026-11', status:'actif', last:'hier' },
+  { name:'Marc Antoine', role:'Étudiant', email:'m.antoine@sfxo.edu.ht', id:'SFXO-2026-14', status:'inactif', last:'il y a 12 jours' },
+  { name:'Sophia Laurent', role:'Étudiant', email:'s.laurent@sfxo.edu.ht', id:'SFXO-2026-07', status:'actif', last:'il y a 4h' },
+  { name:'Dr. Jean-Baptiste', role:'Enseignant', email:'jbaptiste@sfxo.edu.ht', id:'SFXO-T-02', status:'actif', last:'il y a 1h' },
+  { name:'Mme Pierre', role:'Enseignant', email:'mpierre@sfxo.edu.ht', id:'SFXO-T-05', status:'actif', last:'il y a 3h' },
+  { name:'Prof. Charles', role:'Enseignant', email:'pcharles@sfxo.edu.ht', id:'SFXO-T-08', status:'actif', last:'hier' },
+  { name:'Dr. Alexis', role:'Enseignant', email:'dalexis@sfxo.edu.ht', id:'SFXO-T-11', status:'en attente', last:'jamais' },
+  { name:'Mme Étienne', role:'Administrateur', email:'direction@sfxo.edu.ht', id:'SFXO-A-01', status:'actif', last:'à l’instant' }
+];
+const ENROLLMENTS = [
+  { course:'MATH-102 · Mathématiques Générales', students:6, capacity:30, teacher:'Dr. Jean-Baptiste', term:'Automne 2026' },
+  { course:'FR-101 · Français Avancé', students:24, capacity:30, teacher:'Mme Pierre', term:'Automne 2026' },
+  { course:'PHYS-201 · Physique Fondamentale', students:18, capacity:24, teacher:'Prof. Charles', term:'Automne 2026' },
+  { course:'CHEM-101 · Chimie Organique', students:21, capacity:24, teacher:'Dr. Alexis', term:'Automne 2026' }
+];
+const INTEGRATIONS = [
+  { name:'LTI 1.3 Advantage', desc:'Connecter des outils externes au carnet de notes', on:true },
+  { name:'Détection de similarité', desc:'Vérification des devoirs soumis', on:false },
+  { name:'Visioconférence', desc:'Classes en direct et salles de groupe', on:true },
+  { name:'SMS / notifications mobiles', desc:'Rappels par SMS pour les familles', on:true },
+  { name:'Export SIS (CSV)', desc:'Synchronisation avec le registre scolaire', on:false }
+];
+const AUDIT = [
+  { who:'Mme Étienne', what:'A créé le compte enseignant Dr. Alexis', when:'il y a 20 min' },
+  { who:'Dr. Jean-Baptiste', what:'A publié le Module 2 en MATH-102', when:'il y a 2h' },
+  { who:'Système', what:'Sauvegarde nocturne terminée', when:'il y a 9h' },
+  { who:'Mme Pierre', what:'A modifié la date limite de la dissertation', when:'hier' }
+];
+
+const NAV_STUDENT = [
+  ['dashboard','M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25'],
+  ['courses','M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'],
+  ['assignments','M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z'],
+  ['grades','M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+  ['calendar','M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5'],
+  ['inbox','M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75'],
+  ['discussions','M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155'],
+  ['announcements','M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.32-1.256.106-1.508-.461a20.845 20.845 0 01-1.44-4.282m3.083.211a24.863 24.863 0 010-9.72m9.591 9.72a24.863 24.863 0 000-9.72'],
+  ['library','M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z'],
+  ['settings','M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z']
+];
+const IC = {
+  dash:'M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25',
+  book:'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+  pen:'M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z',
+  table:'M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m0 0h-7.5m-9 0h7.5m0 0c.621 0 1.125.504 1.125 1.125M3.375 12c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M12 12.75c0-.621.504-1.125 1.125-1.125M12 12.75V18m9.75-5.25c0-.621-.504-1.125-1.125-1.125m1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-8.625 0h7.5',
+  video:'M15.75 10.5l4.72-2.36A.75.75 0 0121.5 8.79v6.42a.75.75 0 01-1.03.65l-4.72-2.36m-9 3.75h6a2.25 2.25 0 002.25-2.25v-6a2.25 2.25 0 00-2.25-2.25h-6A2.25 2.25 0 004.5 9v6a2.25 2.25 0 002.25 2.25z',
+  spark:'M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z',
+  chart:'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
+  users:'M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z',
+  clipboard:'M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586',
+  plug:'M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.007-1.875 2.25-1.875s2.25.84 2.25 1.875c0 .369-.128.713-.349 1.003-.215.283-.4.604-.4.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.96.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z',
+  shield:'M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.751A11.959 11.959 0 0112 2.714z',
+  mail:'M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75',
+  megaphone:'M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.32-1.256.106-1.508-.461a20.845 20.845 0 01-1.44-4.282m3.083.211a24.863 24.863 0 010-9.72m9.591 9.72a24.863 24.863 0 000-9.72',
+  cog:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z'
+};
+const NAV_TEACHER = [
+  ['dashboard',IC.dash],['courses',IC.book],['grading',IC.pen],['gradebook',IC.table],
+  ['liveClass',IC.video],['aiAssist',IC.spark],['analytics',IC.chart],['inbox',IC.mail],
+  ['announcements',IC.megaphone],['settings',IC.cog]
+];
+const NAV_ADMIN = [
+  ['dashboard',IC.dash],['users',IC.users],['enrollments',IC.clipboard],['courses',IC.book],
+  ['reports',IC.chart],['announcements',IC.megaphone],['integrations',IC.plug],['system',IC.shield],['settings',IC.cog]
+];
+function NAV_FOR(){ return ROLE==='teacher'?NAV_TEACHER : ROLE==='admin'?NAV_ADMIN : NAV_STUDENT; }
+function ME(){ return ROLE==='teacher'?TEACHER : ROLE==='admin'?ADMIN : STUDENT; }
+
+/* ========== UTILITAIRES ========== */
+let route = 'dashboard';
+const el = id => document.getElementById(id);
+function toast(msg){ const b=el('toast'); b.textContent=msg; b.classList.remove('hidden'); clearTimeout(b._t); b._t=setTimeout(()=>b.classList.add('hidden'),2600); }
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function gradeCls(g){ if(g.startsWith('A')) return 'bg-emerald-50 text-emerald-600'; if(g.startsWith('B')) return 'bg-amber-50 text-amber-600'; return 'bg-rose-50 text-rose-600'; }
+function tintBg(t){ return t==='orange' ? 'bg-kayeOrange/10 text-kayeOrange' : 'bg-kayeVioletLight/10 text-kayeVioletDark'; }
+function tintGrad(t){ return t==='orange' ? 'from-kayeOrange to-amber-400' : 'from-kayeVioletLight to-kayeVioletDark'; }
+function unreadCount(){ return Object.values(CONVOS).reduce((s,c)=>s+c.msgs.filter(m=>m.from==='teacher'&&m.unread).length,0); }
+function allAssignments(){ const out=[]; Object.keys(COURSES).forEach(k=>COURSES[k].assignments.forEach(a=>out.push({...a, ck:k, course:COURSES[k].title, tint:COURSES[k].tint}))); return out; }
+function pendingAssignments(){ return allAssignments().filter(a=>a.status!=='graded'); }
+function gpaPct(){ const ks=Object.keys(COURSES); return Math.round(ks.reduce((s,k)=>s+COURSES[k].pct,0)/ks.length); }
+function applyLang(){ document.querySelectorAll('.lang-fr').forEach(e=>e.classList.toggle('hidden',LANG!=='fr')); document.querySelectorAll('.lang-ht').forEach(e=>e.classList.toggle('hidden',LANG!=='ht')); }
+function setLanguage(l){
+  LANG=l;
+  [['lang-btn-fr','lang-btn-ht'],['login-lang-fr','login-lang-ht']].forEach(([a,b])=>{
+    const A=el(a),B=el(b); if(!A||!B) return;
+    if(a.startsWith('login')){
+      A.className = l==='fr' ? 'px-3 py-1.5 text-xs font-bold rounded-md bg-white text-kayeVioletDark' : 'px-3 py-1.5 text-xs font-bold text-white/70 hover:text-white';
+      B.className = l==='ht' ? 'px-3 py-1.5 text-xs font-bold rounded-md bg-white text-kayeVioletDark' : 'px-3 py-1.5 text-xs font-bold text-white/70 hover:text-white';
+    } else {
+      A.classList.toggle('lang-toggle-active', l==='fr'); B.classList.toggle('lang-toggle-active', l==='ht');
+    }
+  });
+  applyLang(); if(!el('screen-app').classList.contains('hidden')){ renderNav(); render(); }
+}
+
+/* ========== CONNEXION ========== */
+let ROLE='student';
+const ROLE_LABEL={student:['Espace étudiant','Espas elèv'],teacher:['Espace enseignant','Espas pwofesè'],admin:['Console administrateur','Konsòl administratè']};
+function setRole(r){
+  ROLE=r; ['student','teacher','admin'].forEach(x=>el('role-'+x).classList.toggle('active',x===r));
+}
+function showLoginView(v){ ['form','reset','signup'].forEach(x=>el('login-'+x+'-view').classList.toggle('hidden',x!==v)); applyLang(); }
+function doLogin(e){
+  if(e) e.preventDefault();
+  const m=ME();
+  el('role-tag').textContent = ROLE_LABEL[ROLE][LANG==='fr'?0:1];
+  el('me-avatar').textContent = m.initials; el('me-name').textContent = m.name; el('me-id').textContent = m.id;
+  el('screen-login').classList.add('hidden'); el('screen-app').classList.remove('hidden');
+  renderNav(); go('dashboard');
+}
+function doLogout(){ el('screen-app').classList.add('hidden'); el('screen-login').classList.remove('hidden'); showLoginView('form'); }
+
+/* ========== NAVIGATION ========== */
+function renderNav(){
+  const nav=NAV_FOR();
+  el('main-nav').innerHTML = nav.map(([key,d])=>{
+    let badge='';
+    if(ROLE==='student'){
+      if(key==='inbox'&&unreadCount()>0) badge=`<span class="text-[10px] font-black bg-kayeOrange text-white rounded-full h-5 min-w-5 px-1 flex items-center justify-center">${unreadCount()}</span>`;
+      else if(key==='assignments'&&pendingAssignments().length>0) badge=`<span class="text-[10px] font-black bg-slate-200 text-slateSecondary rounded-full h-5 min-w-5 px-1 flex items-center justify-center">${pendingAssignments().length}</span>`;
+    } else if(ROLE==='teacher'){
+      if(key==='grading'&&toGradeCount()>0) badge=`<span class="text-[10px] font-black bg-kayeOrange text-white rounded-full h-5 min-w-5 px-1 flex items-center justify-center">${toGradeCount()}</span>`;
+    } else if(ROLE==='admin'){
+      if(key==='users'){ const p=USERS.filter(u=>u.status==='en attente').length; if(p) badge=`<span class="text-[10px] font-black bg-amber-400 text-white rounded-full h-5 min-w-5 px-1 flex items-center justify-center">${p}</span>`; }
+    }
+    return `<a href="#" onclick="go('${key}');return false" id="nav-${key}" class="sidebar-item flex items-center justify-between px-3 py-2.5 rounded-r-lg text-sm font-semibold text-slateSecondary">
+      <span class="flex items-center space-x-3"><svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="${d}"/></svg><span>${t(key)}</span></span>${badge}</a>`;
+  }).join('');
+  nav.forEach(([k])=>{ const n=el('nav-'+k); if(n) n.classList.toggle('active',k===route); });
+  el('role-tag').textContent = ROLE_LABEL[ROLE][LANG==='fr'?0:1];
+}
+function toGradeCount(){ return (ROSTER.maths||[]).filter(s=>s.submitted&&s.score===null).length; }
+function go(r){ route=r; el('notif-panel').classList.add('hidden'); el('search-results').classList.add('hidden'); renderNav(); render(); el('page').scrollTop=0; }
+function crumb(s){ el('breadcrumb').textContent = s; }
+
+/* ========== RENDU DES PAGES ========== */
+function render(){
+  const student = { dashboard:pageDashboard, courses:pageCourses, assignments:pageAssignments, grades:pageGrades,
+    calendar:pageCalendar, inbox:pageInbox, discussions:pageDiscussions, announcements:pageAnnouncements,
+    library:pageLibrary, settings:pageSettings };
+  const teacher = { dashboard:tDashboard, courses:tCourses, grading:tGrading, gradebook:tGradebook,
+    liveClass:tLiveClass, aiAssist:tAiAssist, analytics:tAnalytics, inbox:pageInbox,
+    announcements:pageAnnouncements, settings:pageSettings };
+  const admin = { dashboard:aDashboard, users:aUsers, enrollments:aEnrollments, courses:aCourses,
+    reports:aReports, announcements:pageAnnouncements, integrations:aIntegrations, system:aSystem, settings:pageSettings };
+  const map = ROLE==='teacher'?teacher : ROLE==='admin'?admin : student;
+  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-6xl mx-auto fade-in">${(map[route]||map.dashboard)()}</div>`;
+  crumb('Saint-François-Xavier (SFXO)  ·  ' + t(route));
+  applyLang();
+  if(route==='calendar') buildCalendar();
+  if(ROLE==='teacher'&&route==='grading') loadStudentToGrade(0);
+}
+
+function h2(txt){ return `<h2 class="text-xs font-bold tracking-wider uppercase text-slateSecondary mb-4">${txt}</h2>`; }
+function backBtn(fn){ return `<button onclick="${fn}" class="text-xs font-bold text-slateSecondary hover:text-slatePrimary mb-4 flex items-center space-x-1"><span>←</span><span>${t('back')}</span></button>`; }
+
+/* ---- TABLEAU DE BORD ---- */
+function pageDashboard(){
+  const pend = pendingAssignments().sort((a,b)=>a.due.localeCompare(b.due));
+  return `
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-kayeVioletDark via-kayeVioletLight to-kayeVioletDark p-8 mb-8">
+    <svg class="absolute -right-16 -top-16 opacity-15" width="320" height="320" viewBox="0 0 200 200"><polygon points="100,38 38,172 97,172" fill="#fff"/><polygon points="100,38 103,172 162,172" fill="#fff"/></svg>
+    <svg class="absolute right-10 bottom-2 opacity-10" width="150" height="150" viewBox="0 0 200 200"><circle cx="100" cy="100" r="90" fill="#FF6A45"/></svg>
+    <span class="relative inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-white/15 text-white uppercase tracking-wide mb-3">
+      ${LANG==='fr'?'Prochain cours : Mathématiques Générales — dans 2h':'Pwochen klas : Matematik Jeneral — nan 2è'}</span>
+    <h1 class="relative text-3xl font-black text-white">${LANG==='fr'?'Bienvenue, ':'Anbyen vini, '}${STUDENT.name}</h1>
+    <p class="relative text-sm text-white/80 mt-1 max-w-md">${LANG==='fr'?'"Vous pouvez le faire !" — Votre espace d\'apprentissage en ligne.':'"Ou kapab fè sa !" — Espas aprantisaj ou an liy.'}</p>
+    <div class="relative grid grid-cols-2 md:grid-cols-4 gap-3 mt-7">
+      ${[[Object.keys(COURSES).length,t('activeCourses')],[pend.length,t('dueSoon')],[gpaPct()+'%',t('avgProgress')],[unreadCount(),t('unread')]]
+        .map(([v,l])=>`<div class="bg-white/10 rounded-xl p-4 border border-white/10"><span class="block text-3xl font-black text-white">${v}</span><span class="text-xs text-white/70">${l}</span></div>`).join('')}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <div class="lg:col-span-2">
+      ${h2(t('todo'))}
+      <div class="space-y-3">
+        ${pend.length? pend.map(a=>`
+          <div onclick="openAssignment('${a.ck}','${a.id}')" class="p-4 rounded-xl bg-white border-l-4 border-l-kayeOrange border-y border-r border-borderLight shadow-sm cursor-pointer hover:shadow transition flex justify-between items-start">
+            <div><h4 class="font-bold text-sm">${esc(a.title)}</h4>
+              <span class="text-xs text-slateSecondary block mt-0.5">${esc(a.course)} · ${a.pts} ${t('points')}</span>
+              <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-600">${esc(a.dueLabel)}</span></div>
+            <span class="text-xs font-bold text-kayeVioletLight shrink-0">${t('open')} →</span></div>`).join('')
+          : `<p class="text-xs text-slateSecondary">${t('noItems')}</p>`}
+      </div>
+    </div>
+    <div>
+      ${h2(t('activity'))}
+      <div class="space-y-3">
+        ${NOTIFS.slice(0,4).map((n,i)=>`
+          <div onclick="NOTIFS[${i}].go()" class="p-3 rounded-xl border border-borderLight bg-white shadow-sm cursor-pointer hover:shadow transition">
+            <p class="text-xs leading-relaxed">${esc(n.text)}</p><span class="text-[10px] text-slateSecondary">${esc(n.when)}</span></div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  ${h2(t('courses'))}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">${courseCards()}</div>`;
+}
+
+function courseCards(){
+  return Object.keys(COURSES).map(k=>{
+    const c=COURSES[k];
+    return `<div onclick="openCourse('${k}')" class="rounded-xl border border-borderLight bg-white shadow-sm hover:shadow-md cursor-pointer transition overflow-hidden">
+      <div class="h-2 bg-gradient-to-r ${tintGrad(c.tint)}"></div>
+      <div class="p-5 space-y-3">
+        <div class="flex justify-between items-start">
+          <div class="h-11 w-11 rounded-xl flex items-center justify-center ${tintBg(c.tint)}"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">${c.icon}</svg></div>
+          <span class="px-2.5 py-1 rounded-full text-xs font-black ${gradeCls(c.grade)}">${c.grade}</span>
+        </div>
+        <div><h3 class="text-base font-bold">${esc(c.title)}</h3>
+          <p class="text-xs text-slateSecondary mt-0.5">${esc(c.prof)} · ${esc(c.schedule)}</p></div>
+        <div class="space-y-1">
+          <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden"><div class="bg-gradient-to-r ${tintGrad(c.tint)} h-full" style="width:${c.progress}%"></div></div>
+          <span class="text-xs font-semibold text-kayeVioletLight">${c.progress}% · ${t('open')} →</span>
+        </div>
+      </div></div>`;
+  }).join('');
+}
+
+/* ---- COURS ---- */
+function pageCourses(){ return h2(t('courses')) + `<div class="grid grid-cols-1 md:grid-cols-2 gap-5">${courseCards()}</div>`; }
+
+let CK=null, CTAB='modules';
+function openCourse(k){ CK=k; CTAB='modules'; el('page').innerHTML=`<div class="p-6 md:p-8 max-w-6xl mx-auto fade-in">${courseView()}</div>`; crumb('Cours  /  '+COURSES[k].title); applyLang(); el('page').scrollTop=0; }
+function courseTab(x){ CTAB=x; openCourseKeepTab(); }
+function openCourseKeepTab(){ el('page').innerHTML=`<div class="p-6 md:p-8 max-w-6xl mx-auto fade-in">${courseView()}</div>`; applyLang(); }
+function courseView(){
+  const c=COURSES[CK];
+  const tabs=[['modules',t('modules')],['assignments',t('assignments')],['quizzes',t('quizzes')],['discussions',t('discussions')],['people',t('people')]];
+  return `${backBtn("go('courses')")}
+  <div class="rounded-2xl overflow-hidden border border-borderLight mb-6">
+    <div class="h-2 bg-gradient-to-r ${tintGrad(c.tint)}"></div>
+    <div class="p-6 flex justify-between items-start gap-4">
+      <div class="flex gap-4">
+        <div class="h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${tintBg(c.tint)}"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">${c.icon}</svg></div>
+        <div>
+          <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slateSecondary">${c.code} · ${esc(c.room)}</span>
+          <h3 class="text-xl font-black">${esc(c.title)}</h3>
+          <p class="text-xs text-slateSecondary">${esc(c.prof)} · ${esc(c.schedule)}</p>
+          <p class="text-xs text-slateSecondary mt-2 max-w-lg">${esc(c.description)}</p>
+        </div>
+      </div>
+      <div class="text-right shrink-0">
+        <span class="text-[10px] text-slateSecondary block font-bold uppercase mb-1">${t('gradeNow')}</span>
+        <span class="px-3 py-1 rounded-full text-sm font-black ${gradeCls(c.grade)}">${c.grade} · ${c.pct}%</span>
+      </div>
+    </div>
+  </div>
+  <div class="flex gap-5 border-b border-borderLight mb-6 overflow-x-auto">
+    ${tabs.map(([k,label])=>`<button onclick="courseTab('${k}')" class="${CTAB===k?'subtab-active':'border-b-2 border-transparent'} pb-3 text-sm font-bold text-slateSecondary whitespace-nowrap">${label}</button>`).join('')}
+  </div>
+  ${CTAB==='modules'?courseModules(c):''}
+  ${CTAB==='assignments'?courseAssignments(c):''}
+  ${CTAB==='quizzes'?courseQuizzes(c):''}
+  ${CTAB==='discussions'?courseDiscussions(c):''}
+  ${CTAB==='people'?coursePeople(c):''}`;
+}
+const ITEM_ICONS = {
+  page:'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5A3.375 3.375 0 0010.125 2.25H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>',
+  video:'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.75 10.5l4.72-2.36A.75.75 0 0121.5 8.79v6.42a.75.75 0 01-1.03.65l-4.72-2.36M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/>',
+  quiz:'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+  assignment:'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586"/>'
+};
+function courseModules(c){
+  return `<div class="space-y-4">
+    ${c.modules.map((m,mi)=>`
+      <div class="border border-borderLight rounded-xl overflow-hidden ${m.locked?'opacity-60':''}">
+        <div class="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-borderLight">
+          <div class="flex items-center gap-2">
+            ${m.done?'<span class="h-5 w-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-[11px] font-black">✓</span>':m.locked?'<svg class="h-4 w-4 text-slateSecondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 0h10.5A1.5 1.5 0 0118.75 12v7.5a1.5 1.5 0 01-1.5 1.5H6.75a1.5 1.5 0 01-1.5-1.5V12a1.5 1.5 0 011.5-1.5z"/></svg>':'<span class="h-5 w-5 rounded-full border-2 border-slate-300"></span>'}
+            <span class="text-sm font-bold">${esc(m.title)}</span>
+          </div>
+          <span class="text-[11px] text-slateSecondary font-mono">${esc(m.weeks)}</span>
+        </div>
+        <div class="divide-y divide-borderLight">
+          ${m.items.map(it=>`
+            <div onclick="${m.locked?`toast('Module verrouillé — terminez le module précédent.')`:`moduleItemClick('${it.type}','${esc(it.name).replace(/'/g,"\\'")}')`}" class="flex items-center justify-between px-4 py-3 text-sm cursor-pointer hover:bg-slate-50">
+              <span class="flex items-center gap-3"><svg class="h-4 w-4 text-slateSecondary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">${ITEM_ICONS[it.type]}</svg><span>${esc(it.name)}</span></span>
+              <span class="text-[11px] text-slateSecondary">${it.dur?esc(it.dur):''}</span>
+            </div>`).join('')}
+        </div>
+      </div>`).join('')}
+    <div class="rounded-xl overflow-hidden border border-borderLight">
+      <div class="px-4 py-3 bg-slate-50 border-b border-borderLight"><span class="text-xs font-bold uppercase tracking-wider text-slateSecondary">Vidéo de démonstration</span></div>
+      <div onclick="toast('Lecture simulée : ${esc(c.video.title)}')" class="aspect-video bg-slate-100 flex flex-col items-center justify-center cursor-pointer group hover:bg-slate-200 transition">
+        <div class="h-14 w-14 rounded-full bg-white text-kayeVioletDark shadow flex items-center justify-center group-hover:scale-105 transition"><svg class="h-6 w-6 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+        <span class="text-xs font-bold mt-3">${esc(c.video.title)}</span><span class="text-[10px] text-slateSecondary font-mono mt-0.5">${esc(c.video.dur)}</span>
+      </div>
+    </div>
+  </div>`;
+}
+function moduleItemClick(type,name){
+  if(type==='quiz'){ const q=COURSES[CK].quizzes[0]; if(q) return openQuiz(CK,q.id); }
+  if(type==='assignment'){ const a=COURSES[CK].assignments[0]; if(a) return openAssignment(CK,a.id); }
+  toast(type==='video' ? 'Lecture simulée : '+name : 'Ouverture : '+name);
+}
+function courseAssignments(c){
+  return `<div class="space-y-3">${c.assignments.map(a=>assignmentRow(CK,a)).join('')}</div>`;
+}
+function assignmentRow(ck,a){
+  const graded = a.status==='graded';
+  return `<div onclick="openAssignment('${ck}','${a.id}')" class="p-4 rounded-xl bg-white border-l-4 ${graded?'border-l-emerald-400':'border-l-kayeOrange'} border-y border-r border-borderLight shadow-sm cursor-pointer hover:shadow transition flex justify-between items-start">
+    <div><h4 class="font-bold text-sm">${esc(a.title)}</h4>
+      <span class="text-xs text-slateSecondary block mt-0.5">${esc(COURSES[ck].title)} · ${a.pts} ${t('points')}</span>
+      <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-bold ${graded?'bg-emerald-50 text-emerald-600':'bg-rose-50 text-rose-600'}">${graded?('Noté : '+a.score+'/'+a.pts):esc(a.dueLabel)}</span></div>
+    <span class="text-xs font-bold text-kayeVioletLight shrink-0">${graded?'Feedback':t('open')} →</span></div>`;
+}
+function courseQuizzes(c){
+  return `<div class="space-y-3">${c.quizzes.map(q=>`
+    <div onclick="openQuiz('${CK}','${q.id}')" class="p-4 rounded-xl bg-white border-l-4 border-l-kayeVioletLight border-y border-r border-borderLight shadow-sm cursor-pointer hover:shadow transition flex justify-between items-start">
+      <div><h4 class="font-bold text-sm">${esc(q.title)}</h4>
+        <span class="text-xs text-slateSecondary">${q.questions.length} questions · ${q.pts} ${t('points')} · ${t('attempts')} : ${q.attemptsUsed}/${q.attemptsAllowed}</span></div>
+      <span class="text-xs font-bold text-kayeVioletLight shrink-0">${q.attemptsUsed?t('retry'):t('start')} →</span></div>`).join('')}</div>`;
+}
+function courseDiscussions(c){
+  if(!c.discussions.length) return `<p class="text-xs text-slateSecondary">${t('noItems')}</p>`;
+  return `<div class="space-y-3">${c.discussions.map(d=>discussionRow(CK,d)).join('')}</div>`;
+}
+function coursePeople(c){
+  return `<div class="space-y-4">
+    <div class="p-4 rounded-xl border border-borderLight bg-white flex items-center gap-3">
+      <div class="h-10 w-10 rounded-full bg-kayeOrange/10 text-kayeOrange font-bold flex items-center justify-center text-sm">${c.prof.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+      <div><span class="block text-sm font-bold">${esc(c.prof)}</span><span class="block text-xs text-slateSecondary">Enseignant titulaire</span></div>
+      <button onclick="event.stopPropagation(); go('inbox'); openConvo('${CK}')" class="ml-auto text-xs font-bold text-kayeVioletLight">Message →</button>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      ${c.people.map(p=>`<div class="p-3 rounded-xl border border-borderLight bg-white flex items-center gap-3">
+        <div class="h-8 w-8 rounded-full bg-kayeVioletLight/10 text-kayeVioletDark text-[11px] font-bold flex items-center justify-center">${p.split(' ').map(w=>w[0]).join('')}</div>
+        <span class="text-sm font-semibold">${esc(p)}</span></div>`).join('')}
+    </div>
+  </div>`;
+}
+
+/* ---- DEVOIRS ---- */
+function pageAssignments(){
+  const all = allAssignments().sort((a,b)=>a.due.localeCompare(b.due));
+  const pend = all.filter(a=>a.status!=='graded'), done = all.filter(a=>a.status==='graded');
+  return h2(t('assignments')) + `
+    <div class="space-y-3 mb-8">${pend.length?pend.map(a=>assignmentRow(a.ck,a)).join(''):`<p class="text-xs text-slateSecondary">${t('noItems')}</p>`}</div>
+    ${done.length?h2('Notés')+`<div class="space-y-3">${done.map(a=>assignmentRow(a.ck,a)).join('')}</div>`:''}`;
+}
+function openAssignment(ck,aid){
+  const c=COURSES[ck], a=c.assignments.find(x=>x.id===aid);
+  const graded=a.status==='graded';
+  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-6xl mx-auto fade-in">
+    ${backBtn(`openCourse('${ck}');courseTab('assignments')`)}
+    <div class="border-b border-borderLight pb-4 mb-6">
+      <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slateSecondary">${c.code} — ${esc(c.title)}</span>
+      <h3 class="text-xl font-black">${esc(a.title)}</h3>
+      <span class="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-bold ${graded?'bg-emerald-50 text-emerald-600':'bg-rose-50 text-rose-600'}">${graded?('Noté : '+a.score+'/'+a.pts):esc(a.dueLabel)+' · '+a.pts+' '+t('points')}</span>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 space-y-4">
+        <div class="border border-borderLight rounded-xl p-5 bg-white shadow-sm">
+          <h4 class="text-xs font-bold tracking-wider uppercase text-slateSecondary mb-2">${t('instructions')}</h4>
+          <p class="text-sm leading-relaxed">${esc(a.instructions)}</p>
+        </div>
+        ${graded?`
+        <div class="border border-emerald-200 rounded-xl p-5 bg-emerald-50">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="text-xs font-bold tracking-wider uppercase text-emerald-700">${t('feedback')}</h4>
+            <span class="text-sm font-black text-emerald-700">${a.score}/${a.pts}</span>
+          </div>
+          <p class="text-sm text-emerald-800 leading-relaxed mb-4">${esc(a.feedback)}</p>
+          <div class="space-y-2">${(a.rubric||[]).map(r=>`
+            <div class="flex items-center justify-between text-xs bg-white/70 rounded-lg px-3 py-2">
+              <span class="font-semibold text-emerald-900">${esc(r.c)}</span><span class="font-mono text-emerald-700">${r.s}/${r.m}</span></div>`).join('')}</div>
+        </div>`:''}
+      </div>
+      ${graded?'':`
+      <div class="space-y-4">
+        <div class="border border-borderLight rounded-xl p-4 bg-white shadow-sm space-y-4">
+          <div class="p-3 bg-slate-50 rounded-lg border border-borderLight">
+            <span class="block text-xs font-bold mb-1">Énoncé du devoir</span>
+            <p class="text-[11px] text-slateSecondary mb-3">Téléchargez la fiche de consignes.</p>
+            <button onclick="toast('Téléchargement du PDF de consignes…')" class="w-full py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">↓ ${t('download')}</button>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-lg border border-borderLight">
+            <span class="block text-xs font-bold mb-1">Rendre mon travail</span>
+            <p class="text-[11px] text-slateSecondary mb-3">Fichier .PDF, ou saisie de texte ci-dessous.</p>
+            <div class="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center bg-white hover:border-kayeOrange transition relative mb-3">
+              <input type="file" accept=".pdf" onchange="uploadFile(this)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"/>
+              <span id="upload-text" class="text-xs font-semibold text-slateSecondary">Déposer votre fichier PDF ici</span>
+            </div>
+            <textarea id="text-entry" rows="3" placeholder="…ou tapez votre réponse ici" class="w-full text-xs border border-borderLight rounded-lg px-3 py-2 focus:outline-none focus:border-kayeVioletLight"></textarea>
+            <div class="flex gap-2 mt-3">
+              <button onclick="toast('Brouillon enregistré.')" class="flex-1 py-2 rounded-lg border border-borderLight font-bold text-xs">Brouillon</button>
+              <button onclick="submitAssignment('${ck}','${aid}')" class="flex-1 py-2 rounded-lg bg-kayeOrange hover:bg-orange-600 text-white font-bold text-xs transition">${t('submit')}</button>
+            </div>
+          </div>
+        </div>
+      </div>`}
+    </div>
+  </div>`;
+  crumb('Devoirs  /  '+a.title); applyLang(); el('page').scrollTop=0;
+}
+function uploadFile(inp){ if(inp.files.length){ const n=inp.files[0].name; el('upload-text').innerHTML=`<span class="text-emerald-600 font-bold">✓ ${esc(n)}</span>`; } }
+function submitAssignment(ck,aid){
+  const a=COURSES[ck].assignments.find(x=>x.id===aid);
+  a.status='submitted'; a.dueLabel='Soumis · en attente de correction';
+  toast('Devoir soumis. Vous recevrez un feedback de l’enseignant.');
+  renderNav(); openAssignment(ck,aid);
+}
+
+/* ---- QUIZ ---- */
+let QZ=null;
+function openQuiz(ck,qid){
+  const c=COURSES[ck], q=c.quizzes.find(x=>x.id===qid);
+  QZ={ck,qid,answers:{},submitted:false};
+  renderQuiz();
+}
+function renderQuiz(){
+  const c=COURSES[QZ.ck], q=c.quizzes.find(x=>x.id===QZ.qid);
+  const out = QZ.submitted;
+  let score=0; if(out) q.questions.forEach((qq,i)=>{ if(Number(QZ.answers[i])===qq.a) score++; });
+  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-3xl mx-auto fade-in">
+    ${backBtn(`openCourse('${QZ.ck}');courseTab('quizzes')`)}
+    <div class="border-b border-borderLight pb-4 mb-6">
+      <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slateSecondary">${c.code} · ${q.pts} ${t('points')} · ${t('attempts')} ${q.attemptsUsed}/${q.attemptsAllowed}</span>
+      <h3 class="text-xl font-black">${esc(q.title)}</h3>
+    </div>
+    ${out?`<div class="mb-6 p-4 rounded-xl ${score===q.questions.length?'bg-emerald-50 border border-emerald-200':'bg-amber-50 border border-amber-200'}">
+      <span class="text-sm font-black ${score===q.questions.length?'text-emerald-700':'text-amber-700'}">${score}/${q.questions.length} — ${score===q.questions.length?'Sans faute !':'Continuez, vous y êtes presque.'}</span></div>`:''}
+    <div class="space-y-5">
+      ${q.questions.map((qq,i)=>{
+        const given=QZ.answers[i], ok=Number(given)===qq.a;
+        return `<div class="border border-borderLight rounded-xl p-5 bg-white">
+          <p class="text-sm font-semibold mb-3">${i+1}. ${esc(qq.q)}</p>
+          ${qq.kind==='num'
+            ? `<input ${out?'disabled':''} type="number" value="${given!==undefined?esc(given):''}" oninput="QZ.answers[${i}]=this.value" placeholder="Entrez un nombre" class="w-48 px-3 py-2 border border-borderLight rounded-lg text-sm focus:outline-none focus:border-kayeVioletLight"/>`
+            : `<div class="space-y-2">${qq.choices.map((ch,ci)=>`
+                <label class="flex items-center gap-2 text-sm ${out?'':'cursor-pointer'} px-3 py-2 rounded-lg border ${String(given)===String(ci)?'border-kayeVioletLight bg-kayeVioletLight/5':'border-borderLight'}">
+                  <input ${out?'disabled':''} type="radio" name="q${i}" value="${ci}" ${String(given)===String(ci)?'checked':''} onchange="QZ.answers[${i}]=this.value" class="text-kayeVioletLight"/>
+                  <span>${esc(ch)}</span></label>`).join('')}</div>`}
+          ${out?`<p class="mt-3 text-sm font-bold ${ok?'text-emerald-600':'text-rose-600'}">${ok?'✓ '+t('correct'):'✗ '+t('incorrect')+' — bonne réponse : '+(qq.kind==='num'?qq.a:esc(qq.choices[qq.a]))}</p>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="mt-6 flex gap-3">
+      ${out
+        ? (q.attemptsUsed < q.attemptsAllowed
+            ? `<button onclick="QZ.answers={};QZ.submitted=false;renderQuiz()" class="px-5 py-2.5 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">${t('retry')}</button>`
+            : `<span class="text-xs text-slateSecondary">Nombre maximal de tentatives atteint.</span>`)
+        : `<button onclick="submitQuiz()" class="px-5 py-2.5 rounded-lg bg-kayeOrange hover:bg-orange-600 text-white font-bold text-xs transition">${t('submit')}</button>`}
+      <button onclick="openCourse('${QZ.ck}');courseTab('quizzes')" class="px-5 py-2.5 rounded-lg border border-borderLight font-bold text-xs">${t('back')}</button>
+    </div>
+  </div>`;
+  crumb('Quiz  /  '+q.title); applyLang(); el('page').scrollTop=0;
+}
+function submitQuiz(){
+  const q=COURSES[QZ.ck].quizzes.find(x=>x.id===QZ.qid);
+  if(Object.keys(QZ.answers).length < q.questions.length){ toast('Répondez à toutes les questions avant de soumettre.'); return; }
+  q.attemptsUsed++; QZ.submitted=true;
+  let score=0; q.questions.forEach((qq,i)=>{ if(Number(QZ.answers[i])===qq.a) score++; });
+  renderQuiz();
+}
+
+/* ---- NOTES ---- */
+function pageGrades(){
+  const rows = Object.keys(COURSES);
+  return h2(t('grades')) + `
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+    <div class="bg-slate-50 rounded-xl p-4"><span class="block text-2xl font-black">${gpaPct()}%</span><span class="text-xs text-slateSecondary">${t('overallGpa')}</span></div>
+    <div class="bg-slate-50 rounded-xl p-4"><span class="block text-2xl font-black">${rows.length}</span><span class="text-xs text-slateSecondary">${t('activeCourses')}</span></div>
+  </div>
+  <div class="border border-borderLight rounded-xl overflow-hidden overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slateSecondary text-[11px] uppercase tracking-wider">
+        <tr><th class="text-left px-4 py-3 font-bold">Cours</th><th class="text-left px-4 py-3 font-bold">Enseignant</th>
+        <th class="text-left px-4 py-3 font-bold">Progression</th><th class="text-right px-4 py-3 font-bold">Note</th></tr></thead>
+      <tbody class="divide-y divide-borderLight">
+        ${rows.map(k=>{const c=COURSES[k];return `<tr onclick="openGradeDetail('${k}')" class="hover:bg-slate-50 cursor-pointer">
+          <td class="px-4 py-3 font-semibold">${esc(c.title)}</td><td class="px-4 py-3 text-slateSecondary">${esc(c.prof)}</td>
+          <td class="px-4 py-3"><div class="w-full max-w-[140px] bg-slate-100 h-1.5 rounded-full overflow-hidden"><div class="bg-kayeVioletLight h-full" style="width:${c.progress}%"></div></div></td>
+          <td class="px-4 py-3 text-right"><span class="px-2.5 py-1 rounded-full text-xs font-black ${gradeCls(c.grade)}">${c.grade}</span></td></tr>`;}).join('')}
+      </tbody></table></div>`;
+}
+function openGradeDetail(k){
+  const c=COURSES[k];
+  el('page').innerHTML=`<div class="p-6 md:p-8 max-w-4xl mx-auto fade-in">
+    ${backBtn("go('grades')")}
+    <div class="flex justify-between items-start border-b border-borderLight pb-4 mb-6">
+      <div><span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slateSecondary">${c.code}</span>
+        <h3 class="text-xl font-black">${esc(c.title)}</h3><p class="text-xs text-slateSecondary">${esc(c.prof)}</p></div>
+      <div class="text-right"><span class="text-[10px] text-slateSecondary block font-bold uppercase mb-1">${t('overallGpa')}</span>
+        <span class="px-3 py-1 rounded-full text-sm font-black ${gradeCls(c.grade)}">${c.grade} · ${c.pct}%</span></div>
+    </div>
+    <div class="border border-borderLight rounded-xl overflow-hidden mb-6">
+      <table class="w-full text-sm"><thead class="bg-slate-50 text-slateSecondary text-[11px] uppercase tracking-wider">
+        <tr><th class="text-left px-4 py-3 font-bold">Évaluation</th><th class="text-left px-4 py-3 font-bold">Date</th><th class="text-right px-4 py-3 font-bold">Note</th></tr></thead>
+        <tbody class="divide-y divide-borderLight">${c.assessments.map(a=>`<tr>
+          <td class="px-4 py-3 font-semibold">${esc(a.name)}</td><td class="px-4 py-3 text-slateSecondary">${esc(a.date)}</td>
+          <td class="px-4 py-3 text-right font-bold">${a.score}/${a.max}</td></tr>`).join('')}</tbody></table></div>
+    <div class="border border-borderLight rounded-xl p-5">
+      <h4 class="text-xs font-bold uppercase tracking-wider text-slateSecondary mb-4">Évolution des notes</h4>
+      <div class="flex items-end gap-3 h-32">
+        ${c.assessments.map(a=>`<div class="flex-1 flex flex-col items-center gap-1">
+          <div class="w-full bg-gradient-to-t ${tintGrad(c.tint)} rounded-t" style="height:${a.score/a.max*100}%"></div>
+          <span class="text-[9px] text-slateSecondary text-center leading-tight">${a.date}</span></div>`).join('')}
+      </div>
+    </div></div>`;
+  crumb('Notes  /  '+c.title); applyLang(); el('page').scrollTop=0;
+}
+
+/* ---- CALENDRIER ---- */
+function pageCalendar(){
+  return h2(t('calendar')) + `<div id="cal-root"></div>
+    <div class="mt-6">${h2('Emploi du temps hebdomadaire')}
+      <div class="border border-borderLight rounded-xl divide-y divide-borderLight">
+        ${Object.keys(COURSES).map(k=>{const c=COURSES[k];return `<div onclick="openCourse('${k}')" class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-50">
+          <span class="flex items-center gap-3"><span class="h-2.5 w-2.5 rounded-full ${c.tint==='orange'?'bg-kayeOrange':'bg-kayeVioletLight'}"></span>
+          <span class="text-sm font-semibold">${esc(c.title)}</span></span>
+          <span class="text-xs text-slateSecondary">${esc(c.schedule)} · ${esc(c.room)}</span></div>`;}).join('')}
+      </div></div>`;
+}
+function buildCalendar(){
+  const now=new Date(2026,7,1), y=now.getFullYear(), m=now.getMonth();
+  const first=new Date(y,m,1).getDay(), days=new Date(y,m+1,0).getDate();
+  const evts={}; allAssignments().forEach(a=>{ const d=new Date(a.due); if(d.getMonth()===m){ (evts[d.getDate()]=evts[d.getDate()]||[]).push(a); } });
+  let cells='';
+  for(let i=0;i<first;i++) cells+='<div class="h-20 border border-borderLight bg-slate-50/50"></div>';
+  for(let d=1;d<=days;d++){
+    const list=evts[d]||[];
+    cells+=`<div class="cal-day h-20 border border-borderLight p-1.5 overflow-hidden ${d===3?'bg-kayeVioletLight/5':''}">
+      <span class="text-[11px] font-bold ${d===3?'text-kayeVioletDark':'text-slateSecondary'}">${d}</span>
+      ${list.slice(0,2).map(a=>`<div onclick="openAssignment('${a.ck}','${a.id}')" class="mt-0.5 px-1 py-0.5 rounded text-[9px] font-bold truncate cursor-pointer ${a.tint==='orange'?'bg-kayeOrange/15 text-kayeOrange':'bg-kayeVioletLight/15 text-kayeVioletDark'}">${esc(a.title)}</div>`).join('')}
+      ${list.length>2?`<span class="text-[9px] text-slateSecondary">+${list.length-2}</span>`:''}</div>`;
+  }
+  el('cal-root').innerHTML=`
+    <div class="flex items-center justify-between mb-3">
+      <span class="text-sm font-black">Août 2026</span>
+      <span class="text-xs text-slateSecondary">${allAssignments().length} échéances ce mois</span>
+    </div>
+    <div class="grid grid-cols-7 text-center text-[10px] font-bold uppercase text-slateSecondary mb-1">
+      ${['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'].map(d=>`<span>${d}</span>`).join('')}</div>
+    <div class="grid grid-cols-7">${cells}</div>`;
+}
+
+/* ---- MESSAGERIE ---- */
+let CONVO=null;
+function pageInbox(){
+  return h2(t('inbox')) + `<div class="border border-borderLight rounded-xl overflow-hidden">
+    ${Object.keys(CONVOS).map((k,i)=>{const c=CONVOS[k],last=c.msgs[c.msgs.length-1],un=c.msgs.some(m=>m.from==='teacher'&&m.unread);
+      return `<div onclick="openConvo('${k}')" class="flex items-center justify-between px-4 py-4 cursor-pointer hover:bg-slate-50 ${i?'border-t border-borderLight':''}">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="h-10 w-10 shrink-0 rounded-full bg-kayeVioletLight/10 text-kayeVioletDark font-bold flex items-center justify-center text-sm">${c.initials}</div>
+          <div class="min-w-0"><span class="block text-sm font-bold truncate">${esc(c.name)}</span>
+            <span class="block text-xs text-slateSecondary truncate">${esc(last.text)}</span>
+            <span class="block text-[10px] text-slateSecondary">${esc(c.course)}</span></div></div>
+        ${un?'<span class="h-2.5 w-2.5 rounded-full bg-kayeOrange shrink-0"></span>':''}</div>`;}).join('')}</div>`;
+}
+function openConvo(k){
+  CONVO=k; const c=CONVOS[k];
+  c.msgs.forEach(m=>{ if(m.from==='teacher') m.unread=false; });
+  renderNav();
+  el('page').innerHTML=`<div class="p-6 md:p-8 max-w-3xl mx-auto fade-in">
+    ${backBtn("go('inbox')")}
+    <div class="border-b border-borderLight pb-4 mb-4 flex items-center gap-3">
+      <div class="h-10 w-10 rounded-full bg-kayeVioletLight/10 text-kayeVioletDark font-bold flex items-center justify-center text-sm">${c.initials}</div>
+      <div><h3 class="text-base font-black">${esc(c.name)}</h3><p class="text-xs text-slateSecondary">${esc(c.course)}</p></div>
+    </div>
+    <div id="thread" class="space-y-3 mb-4"></div>
+    <div class="flex gap-2 border-t border-borderLight pt-4">
+      <input id="msg-input" onkeydown="if(event.key==='Enter')sendMsg()" type="text" placeholder="Écrivez un message…" class="flex-1 px-3 py-2 border border-borderLight rounded-lg text-sm focus:outline-none focus:border-kayeVioletLight"/>
+      <button onclick="sendMsg()" class="px-5 py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">${t('send')}</button>
+    </div></div>`;
+  drawThread(); crumb('Messagerie  /  '+c.name); applyLang();
+}
+function drawThread(){
+  const c=CONVOS[CONVO];
+  el('thread').innerHTML=c.msgs.map(m=>`<div class="flex ${m.from==='student'?'justify-end':'justify-start'}">
+    <div class="msg-${m.from} px-4 py-2 text-sm max-w-xs">${esc(m.text)}</div></div>`).join('');
+}
+function sendMsg(){
+  const i=el('msg-input'); if(!i.value.trim()) return;
+  CONVOS[CONVO].msgs.push({from:'student',text:i.value.trim(),unread:false}); i.value=''; drawThread();
+}
+
+/* ---- FORUMS ---- */
+function pageDiscussions(){
+  const all=[]; Object.keys(COURSES).forEach(k=>COURSES[k].discussions.forEach(d=>all.push({ck:k,d})));
+  return h2(t('discussions')) + `
+    <button onclick="toast('Formulaire de nouveau sujet — maquette.')" class="mb-4 px-4 py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">+ ${t('newPost')}</button>
+    <div class="space-y-3">${all.length?all.map(x=>discussionRow(x.ck,x.d)).join(''):`<p class="text-xs text-slateSecondary">${t('noItems')}</p>`}</div>`;
+}
+function discussionRow(ck,d){
+  return `<div onclick="openThread('${ck}','${d.id}')" class="p-4 rounded-xl border border-borderLight bg-white shadow-sm cursor-pointer hover:shadow transition">
+    <div class="flex justify-between items-start gap-3">
+      <div><h4 class="font-bold text-sm">${esc(d.title)}</h4>
+        <span class="text-xs text-slateSecondary">${esc(COURSES[ck].title)} · ${esc(d.author)} · ${esc(d.when)}</span></div>
+      <span class="text-xs font-bold text-kayeVioletLight shrink-0">${d.replies.length} ${t('replies')} →</span></div></div>`;
+}
+let TH=null;
+function openThread(ck,did){
+  TH={ck,did}; const d=COURSES[ck].discussions.find(x=>x.id===did);
+  el('page').innerHTML=`<div class="p-6 md:p-8 max-w-3xl mx-auto fade-in">
+    ${backBtn("go('discussions')")}
+    <div class="border-b border-borderLight pb-4 mb-5">
+      <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slateSecondary">${esc(COURSES[ck].title)}</span>
+      <h3 class="text-xl font-black">${esc(d.title)}</h3>
+      <p class="text-xs text-slateSecondary">${esc(d.author)} · ${esc(d.when)}</p>
+    </div>
+    <div class="p-4 rounded-xl bg-slate-50 border border-borderLight text-sm mb-5">${esc(d.body)}</div>
+    <div id="thread-replies" class="space-y-3 mb-5"></div>
+    <div class="flex gap-2 border-t border-borderLight pt-4">
+      <input id="reply-input" onkeydown="if(event.key==='Enter')postReply()" type="text" placeholder="Votre réponse…" class="flex-1 px-3 py-2 border border-borderLight rounded-lg text-sm focus:outline-none focus:border-kayeVioletLight"/>
+      <button onclick="postReply()" class="px-5 py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">${t('reply')}</button>
+    </div></div>`;
+  drawReplies(); crumb('Forums  /  '+d.title); applyLang();
+}
+function drawReplies(){
+  const d=COURSES[TH.ck].discussions.find(x=>x.id===TH.did);
+  el('thread-replies').innerHTML=d.replies.map(r=>`
+    <div class="flex gap-3 p-3 rounded-xl border border-borderLight bg-white">
+      <div class="h-8 w-8 shrink-0 rounded-full bg-kayeVioletLight/10 text-kayeVioletDark text-[11px] font-bold flex items-center justify-center">${r.author.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+      <div><span class="block text-xs font-bold">${esc(r.author)} <span class="text-slateSecondary font-normal">· ${esc(r.when)}</span></span>
+        <p class="text-sm mt-0.5">${esc(r.body)}</p></div></div>`).join('');
+}
+function postReply(){
+  const i=el('reply-input'); if(!i.value.trim()) return;
+  COURSES[TH.ck].discussions.find(x=>x.id===TH.did).replies.push({author:STUDENT.name,body:i.value.trim(),when:'à l’instant'});
+  i.value=''; drawReplies(); toast('Réponse publiée. +10 XP');
+}
+
+/* ---- ANNONCES ---- */
+function pageAnnouncements(){
+  return h2(t('announcements')) + `<div class="space-y-3">${ANNOUNCEMENTS.map((a,i)=>`
+    <div onclick="openAnnouncement(${i})" class="p-4 rounded-xl border-l-4 border-l-kayeVioletLight border-y border-r border-borderLight bg-white shadow-sm cursor-pointer hover:shadow transition">
+      <h4 class="font-bold text-sm">${esc(a.title)}</h4>
+      <span class="text-xs text-slateSecondary">${esc(a.from)} · ${esc(a.when)}</span></div>`).join('')}</div>`;
+}
+function openAnnouncement(i){
+  const a=ANNOUNCEMENTS[i];
+  el('page').innerHTML=`<div class="p-6 md:p-8 max-w-3xl mx-auto fade-in">
+    ${backBtn("go('announcements')")}
+    <h3 class="text-xl font-black mb-1">${esc(a.title)}</h3>
+    <p class="text-xs text-slateSecondary mb-5">${esc(a.from)} · ${esc(a.when)}</p>
+    <div class="p-5 rounded-xl border border-borderLight bg-white text-sm leading-relaxed">${esc(a.body)}</div></div>`;
+  crumb('Annonces  /  '+a.title); applyLang();
+}
+
+/* ---- BIBLIOTHÈQUE ---- */
+const FILE_ICON={pdf:'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5A3.375 3.375 0 0010.125 2.25H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>',
+  video:'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.75 10.5l4.72-2.36A.75.75 0 0121.5 8.79v6.42a.75.75 0 01-1.03.65l-4.72-2.36M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/>'};
+function pageLibrary(){
+  return h2(t('library')) + `<div class="border border-borderLight rounded-xl overflow-hidden">
+    ${LIBRARY.map((f,i)=>`<div onclick="toast('Téléchargement : ${esc(f.name)}')" class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-50 ${i?'border-t border-borderLight':''}">
+      <span class="flex items-center gap-3 min-w-0"><svg class="h-5 w-5 text-slateSecondary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">${FILE_ICON[f.kind]}</svg>
+        <span class="min-w-0"><span class="block text-sm font-semibold truncate">${esc(f.name)}</span>
+        <span class="block text-xs text-slateSecondary truncate">${esc(f.course)}</span></span></span>
+      <span class="text-xs text-slateSecondary font-mono shrink-0">${esc(f.size)}</span></div>`).join('')}</div>`;
+}
+
+/* ---- PARAMÈTRES ---- */
+const SETTINGS=[
+  ['profil','Profil','Informations personnelles et identifiant étudiant.','<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a8.25 8.25 0 0115 0"/>'],
+  ['securite','Sécurité','Mot de passe et authentification à deux facteurs.','<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 0h10.5A1.5 1.5 0 0118.75 12v7.5a1.5 1.5 0 01-1.5 1.5h-10.5A1.5 1.5 0 015.25 19.5V12a1.5 1.5 0 011.5-1.5z"/>'],
+  ['notifications','Notifications','Rappels de devoirs, notes et annonces.','<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/>'],
+  ['preferences','Préférences','Langue, fuseau horaire et accessibilité.','<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 21a9 9 0 100-18 9 9 0 000 18zM3.6 9h16.8M3.6 15h16.8M12 3a15.3 15.3 0 010 18 15.3 15.3 0 010-18z"/>']
+];
+function pageSettings(){
+  return h2(t('settings')) + `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    ${SETTINGS.map(([k,title,desc,icon])=>`<div onclick="openSetting('${k}')" class="p-5 border border-borderLight rounded-xl cursor-pointer hover:border-kayeVioletLight transition bg-white shadow-sm hover:shadow flex gap-4">
+      <div class="h-10 w-10 shrink-0 rounded-lg flex items-center justify-center bg-kayeVioletLight/10 text-kayeVioletDark"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">${icon}</svg></div>
+      <div><h3 class="text-base font-bold">${title}</h3><p class="text-xs text-slateSecondary mt-0.5">${desc}</p>
+        <span class="inline-block mt-2 text-xs font-semibold text-kayeVioletLight">Gérer →</span></div></div>`).join('')}</div>`;
+}
+function field(l,v,ty){ return `<div><label class="block text-xs font-bold text-slateSecondary mb-1">${l}</label>
+  <input type="${ty||'text'}" value="${v||''}" class="w-full px-3 py-2 border border-borderLight rounded-lg text-sm focus:outline-none focus:border-kayeVioletLight"/></div>`; }
+function toggleRow(l,on){ return `<div class="flex items-center justify-between py-2">
+  <span class="text-sm font-semibold">${l}</span>
+  <label class="relative inline-block w-11 h-6 cursor-pointer"><input type="checkbox" class="toggle-input sr-only" ${on?'checked':''}>
+  <div class="toggle-track absolute inset-0 bg-slate-200 rounded-full transition-colors"></div></label></div>`; }
+function openSetting(k){
+  const s=SETTINGS.find(x=>x[0]===k);
+  let body='';
+  if(k==='profil') body=`<div class="flex items-center gap-4 mb-5">
+      <div class="h-16 w-16 rounded-full bg-kayeVioletLight text-white font-black flex items-center justify-center text-xl">${STUDENT.initials}</div>
+      <button onclick="toast('Sélecteur de photo — maquette.')" class="px-4 py-2 rounded-lg border border-borderLight font-bold text-xs">Changer la photo</button></div>
+    <div class="max-w-md space-y-4">${field('Nom complet',STUDENT.name)}${field('Email',STUDENT.email,'email')}${field('Identifiant étudiant',STUDENT.id)}</div>`;
+  if(k==='securite') body=`<div class="max-w-md space-y-4">${field('Mot de passe actuel','','password')}${field('Nouveau mot de passe','','password')}${field('Confirmer','','password')}
+    <div class="pt-2 border-t border-borderLight">${toggleRow('Authentification à deux facteurs',true)}</div></div>`;
+  if(k==='notifications') body=`<div class="max-w-md divide-y divide-borderLight">${toggleRow('Rappels de devoirs',true)}${toggleRow('Mises à jour de notes',true)}${toggleRow('Messages des enseignants',true)}${toggleRow('Annonces de l’école',false)}${toggleRow('Résumé hebdomadaire par email',true)}</div>`;
+  if(k==='preferences') body=`<div class="max-w-md space-y-4">
+    <div><label class="block text-xs font-bold text-slateSecondary mb-1">Langue par défaut</label>
+      <select onchange="setLanguage(this.value==='Kreyòl'?'ht':'fr')" class="w-full px-3 py-2 border border-borderLight rounded-lg text-sm">
+        <option ${LANG==='fr'?'selected':''}>Français</option><option ${LANG==='ht'?'selected':''}>Kreyòl</option></select></div>
+    <div><label class="block text-xs font-bold text-slateSecondary mb-1">Fuseau horaire</label>
+      <select class="w-full px-3 py-2 border border-borderLight rounded-lg text-sm"><option>Amérique / Port-au-Prince</option></select></div>
+    <div class="pt-2 border-t border-borderLight">${toggleRow('Mode économie de données',true)}${toggleRow('Texte agrandi',false)}</div></div>`;
+  el('page').innerHTML=`<div class="p-6 md:p-8 max-w-4xl mx-auto fade-in">${backBtn("go('settings')")}
+    <h3 class="text-xl font-black mb-1">${s[1]}</h3><p class="text-xs text-slateSecondary mb-6">${s[2]}</p>${body}
+    <button onclick="toast('Modifications enregistrées.')" class="mt-6 px-5 py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">Enregistrer</button></div>`;
+  crumb('Paramètres  /  '+s[1]); applyLang();
+}
+
+/* ---- NOTIFICATIONS ---- */
+function toggleNotifications(){
+  const p=el('notif-panel'); el('search-results').classList.add('hidden');
+  if(!p.classList.contains('hidden')){ p.classList.add('hidden'); return; }
+  p.innerHTML=`<div class="px-4 py-3 border-b border-borderLight flex items-center justify-between">
+      <span class="text-xs font-bold uppercase tracking-wider text-slateSecondary">Notifications</span>
+      <button onclick="NOTIFS.forEach(n=>n.unread=false);el('notif-dot').classList.add('hidden');toggleNotifications()" class="text-[11px] font-bold text-kayeVioletLight">Tout marquer lu</button></div>
+    ${NOTIFS.map((n,i)=>`<div onclick="el('notif-panel').classList.add('hidden');NOTIFS[${i}].go()" class="px-4 py-3 border-b border-borderLight last:border-0 cursor-pointer hover:bg-slate-50 flex gap-2">
+      <span class="h-2 w-2 rounded-full mt-1.5 shrink-0 ${n.unread?'bg-kayeOrange':'bg-transparent'}"></span>
+      <div><p class="text-xs leading-relaxed">${esc(n.text)}</p><span class="text-[10px] text-slateSecondary">${esc(n.when)}</span></div></div>`).join('')}`;
+  p.classList.remove('hidden');
+}
+
+/* ---- RECHERCHE GLOBALE ---- */
+function runGlobalSearch(q){
+  const box=el('search-results'); q=(q||'').trim().toLowerCase();
+  if(q.length<2){ box.classList.add('hidden'); return; }
+  const hits=[];
+  Object.keys(COURSES).forEach(k=>{ const c=COURSES[k];
+    if(c.title.toLowerCase().includes(q)||c.code.toLowerCase().includes(q)||c.prof.toLowerCase().includes(q))
+      hits.push({label:c.title,sub:'Cours · '+c.code,fn:`openCourse('${k}')`});
+    c.assignments.forEach(a=>{ if(a.title.toLowerCase().includes(q)) hits.push({label:a.title,sub:'Devoir · '+c.title,fn:`openAssignment('${k}','${a.id}')`}); });
+    c.quizzes.forEach(qz=>{ if(qz.title.toLowerCase().includes(q)) hits.push({label:qz.title,sub:'Quiz · '+c.title,fn:`openQuiz('${k}','${qz.id}')`}); });
+    c.discussions.forEach(d=>{ if(d.title.toLowerCase().includes(q)) hits.push({label:d.title,sub:'Forum · '+c.title,fn:`openThread('${k}','${d.id}')`}); });
+  });
+  ANNOUNCEMENTS.forEach((a,i)=>{ if(a.title.toLowerCase().includes(q)) hits.push({label:a.title,sub:'Annonce',fn:`openAnnouncement(${i})`}); });
+  LIBRARY.forEach(f=>{ if(f.name.toLowerCase().includes(q)) hits.push({label:f.name,sub:'Fichier · '+f.course,fn:`go('library')`}); });
+  box.innerHTML = hits.length
+    ? hits.slice(0,12).map(h=>`<div onclick="el('search-results').classList.add('hidden');el('global-search').value='';${h.fn}" class="px-4 py-2.5 border-b border-borderLight last:border-0 cursor-pointer hover:bg-slate-50">
+        <span class="block text-xs font-bold truncate">${esc(h.label)}</span><span class="block text-[10px] text-slateSecondary">${esc(h.sub)}</span></div>`).join('')
+    : `<div class="px-4 py-3 text-xs text-slateSecondary">Aucun résultat.</div>`;
+  box.classList.remove('hidden');
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#global-search')&&!e.target.closest('#search-results')) el('search-results').classList.add('hidden');
+  if(!e.target.closest('#notif-panel')&&!e.target.closest('button')) el('notif-panel').classList.add('hidden');
+});
+
+/* ============================================================
+   ESPACE ENSEIGNANT
+   ============================================================ */
+function statPill(v,l,color){ return `<div class="bg-white/10 rounded-xl p-4 border border-white/10"><span class="block text-3xl font-black text-white">${v}</span><span class="text-xs text-white/70">${l}</span></div>`; }
+function tDashboard(){
+  const r=ROSTER.maths, avg=Math.round(r.reduce((s,x)=>s+x.avg,0)/r.length), risk=r.filter(x=>x.risk);
+  return `
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-kayeVioletDark via-kayeVioletLight to-kayeVioletDark p-8 mb-8">
+    <svg class="absolute -right-16 -top-16 opacity-15" width="320" height="320" viewBox="0 0 200 200"><polygon points="100,38 38,172 97,172" fill="#fff"/><polygon points="100,38 103,172 162,172" fill="#fff"/></svg>
+    <span class="relative inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-white/15 text-white uppercase tracking-wide mb-3">${LANG==='fr'?'Prochain cours : MATH-102 — dans 2h · Salle 12':'Pwochen klas : MATH-102 — nan 2è · Sal 12'}</span>
+    <h1 class="relative text-3xl font-black text-white">${LANG==='fr'?'Bonjour, ':'Bonjou, '}${TEACHER.name}</h1>
+    <p class="relative text-sm text-white/80 mt-1">${LANG==='fr'?'Vous avez '+toGradeCount()+' copies à corriger aujourd’hui.':'Ou gen '+toGradeCount()+' kopi pou korije jodi a.'}</p>
+    <div class="relative grid grid-cols-2 md:grid-cols-4 gap-3 mt-7">
+      ${statPill(r.length,LANG==='fr'?'Élèves inscrits':'Elèv enskri')}
+      ${statPill(toGradeCount(),t('toGrade'))}
+      ${statPill(avg+'%',LANG==='fr'?'Moyenne de classe':'Mwayèn klas')}
+      ${statPill(risk.length,t('atRisk'))}
+    </div>
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <div class="lg:col-span-2">
+      ${h2(t('toGrade'))}
+      <div class="space-y-3">
+        ${r.filter(s=>s.submitted&&s.score===null).map((s,i)=>`
+          <div onclick="go('grading')" class="p-4 rounded-xl bg-white border-l-4 border-l-kayeOrange border-y border-r border-borderLight shadow-sm cursor-pointer hover:shadow transition flex justify-between items-center">
+            <span class="flex items-center gap-3"><span class="h-8 w-8 rounded-full bg-kayeVioletLight/10 text-kayeVioletDark text-[11px] font-bold flex items-center justify-center">${s.ini}</span>
+            <span><span class="block text-sm font-bold">${esc(s.name)}</span><span class="block text-xs text-slateSecondary">Devoir #4 · ${esc(s.file)}</span></span></span>
+            <span class="text-xs font-bold text-kayeVioletLight">${t('grading')} →</span></div>`).join('') || `<p class="text-xs text-slateSecondary">${t('noItems')}</p>`}
+      </div>
+    </div>
+    <div>
+      ${h2(t('atRisk'))}
+      <div class="space-y-3">
+        ${risk.map(s=>`<div class="p-4 rounded-xl border border-rose-200 bg-rose-50">
+          <span class="block text-sm font-bold text-rose-900">${esc(s.name)}</span>
+          <span class="block text-xs text-rose-700 mt-0.5">Moyenne ${s.avg}% · Présence ${s.attendance}%</span>
+          <button onclick="toast('Message envoyé à ${esc(s.name)} et à sa famille.')" class="mt-2 text-xs font-bold text-rose-700 underline">Contacter</button></div>`).join('')}
+      </div>
+    </div>
+  </div>
+  ${h2(t('courses'))}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">${tCourseCards()}</div>`;
+}
+function tCourseCards(){
+  return TEACHER.courses.map(k=>{ const c=COURSES[k], r=ROSTER[k]||[];
+    return `<div onclick="tOpenCourse('${k}')" class="rounded-xl border border-borderLight bg-white shadow-sm hover:shadow-md cursor-pointer transition overflow-hidden">
+      <div class="h-2 bg-gradient-to-r ${tintGrad(c.tint)}"></div>
+      <div class="p-5 space-y-3">
+        <div class="flex justify-between items-start">
+          <div class="h-11 w-11 rounded-xl flex items-center justify-center ${tintBg(c.tint)}"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">${c.icon}</svg></div>
+          <span class="px-2.5 py-1 rounded-full text-xs font-black bg-slate-100 text-slateSecondary">${r.length} élèves</span>
+        </div>
+        <div><h3 class="text-base font-bold">${esc(c.title)}</h3><p class="text-xs text-slateSecondary mt-0.5">${c.code} · ${esc(c.schedule)} · ${esc(c.room)}</p></div>
+        <span class="text-xs font-semibold text-kayeVioletLight">${t('open')} →</span>
+      </div></div>`; }).join('') +
+    `<div onclick="toast('Assistant de création de cours — voir l’onglet Assistant IA.')" class="rounded-xl border-2 border-dashed border-borderLight flex items-center justify-center p-8 cursor-pointer hover:border-kayeVioletLight transition">
+      <span class="text-xs font-bold text-slateSecondary">+ ${LANG==='fr'?'Créer un cours':'Kreye yon klas'}</span></div>`;
+}
+function tCourses(){ return h2(t('courses')) + `<div class="grid grid-cols-1 md:grid-cols-2 gap-5">${tCourseCards()}</div>`; }
+
+let TCK=null, TTAB='modules';
+function tOpenCourse(k){ TCK=k; TTAB='modules'; tDrawCourse(); }
+function tCourseTab(x){ TTAB=x; tDrawCourse(); }
+function tDrawCourse(){
+  const c=COURSES[TCK], r=ROSTER[TCK]||[];
+  const tabs=[['modules',t('modules')],['assignments',t('assignments')],['quizzes',t('quizzes')],['roster',t('roster')],['discussions',t('discussions')]];
+  let body='';
+  if(TTAB==='modules'){
+    body=`<div class="space-y-4">${c.modules.map(m=>`
+      <div class="border border-borderLight rounded-xl overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-borderLight">
+          <span class="text-sm font-bold">${esc(m.title)}</span>
+          <span class="flex items-center gap-2"><span class="text-[11px] text-slateSecondary font-mono">${esc(m.weeks)}</span>
+          <button onclick="toast('Module publié aux élèves.')" class="text-[11px] font-bold text-kayeVioletLight">Publier</button></span>
+        </div>
+        <div class="divide-y divide-borderLight">${m.items.map(it=>`
+          <div class="flex items-center justify-between px-4 py-3 text-sm">
+            <span class="flex items-center gap-3"><svg class="h-4 w-4 text-slateSecondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">${ITEM_ICONS[it.type]}</svg><span>${esc(it.name)}</span></span>
+            <button onclick="toast('Édition : ${esc(it.name).replace(/'/g,"\\'")}')" class="text-[11px] font-bold text-slateSecondary hover:text-kayeVioletDark">Modifier</button></div>`).join('')}</div>
+      </div>`).join('')}
+      <div onclick="toast('Nouveau module ajouté comme brouillon.')" class="p-4 border-2 border-dashed border-borderLight rounded-lg text-center text-xs font-bold text-slateSecondary cursor-pointer hover:border-kayeVioletLight hover:text-kayeVioletLight transition">+ Ajouter un module</div></div>`;
+  }
+  if(TTAB==='assignments'){
+    body=`<div class="space-y-3">${c.assignments.map(a=>{
+      const sub=r.filter(s=>s.submitted).length;
+      return `<div class="p-4 rounded-xl bg-white border-l-4 border-l-kayeOrange border-y border-r border-borderLight shadow-sm flex justify-between items-center">
+        <div><h4 class="font-bold text-sm">${esc(a.title)}</h4>
+          <span class="text-xs text-slateSecondary">${esc(a.dueLabel)} · ${a.pts} ${t('points')} · ${sub}/${r.length} soumis</span></div>
+        <button onclick="go('grading')" class="text-xs font-bold text-kayeVioletLight">${t('grading')} →</button></div>`; }).join('')}
+      <div onclick="toast('Nouveau devoir créé comme brouillon.')" class="p-4 border-2 border-dashed border-borderLight rounded-lg text-center text-xs font-bold text-slateSecondary cursor-pointer hover:border-kayeVioletLight hover:text-kayeVioletLight transition">+ Créer un devoir</div></div>`;
+  }
+  if(TTAB==='quizzes'){
+    body=`<div class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2"><label class="block text-xs font-bold text-slateSecondary mb-1">Titre du quiz</label>
+          <input type="text" value="Quiz 2 : Dérivées et limites" class="w-full px-3 py-2 border border-borderLight rounded-lg text-sm focus:outline-none focus:border-kayeVioletLight"/></div>
+        <div><label class="block text-xs font-bold text-slateSecondary mb-1">Durée limite</label>
+          <input type="text" value="30 minutes" class="w-full px-3 py-2 border border-borderLight rounded-lg text-sm focus:outline-none focus:border-kayeVioletLight"/></div>
+      </div>
+      <div class="flex items-center justify-between p-3 bg-kayeVioletLight/5 border border-kayeVioletLight/20 rounded-lg">
+        <div><span class="block text-sm font-bold">Banque randomisée</span><span class="block text-xs text-slateSecondary">Chaque élève reçoit une sélection différente.</span></div>
+        <label class="relative inline-block w-11 h-6 cursor-pointer shrink-0"><input type="checkbox" class="toggle-input sr-only" checked><div class="toggle-track absolute inset-0 bg-slate-200 rounded-full"></div></label>
+      </div>
+      <div><h4 class="text-xs font-bold uppercase tracking-wider text-slateSecondary mb-2">Banque de questions</h4>
+        <div class="border border-borderLight rounded-xl divide-y divide-borderLight">
+          ${[['Quelle est la dérivée de x³ ?','QCM'],['La limite de 1/x quand x→∞ est 0.','Vrai/Faux'],['Calculez la dérivée de f(x)=3x²+2x.','Réponse courte'],['Associez chaque fonction à sa dérivée.','Association'],['Quelle règle pour dériver un produit ?','QCM']]
+            .map(([q,ty])=>`<label class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-50">
+              <span class="flex items-center gap-3"><input type="checkbox" checked class="rounded border-borderLight text-kayeVioletLight"/><span class="text-sm">${esc(q)}</span></span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-kayeVioletLight/10 text-kayeVioletDark uppercase shrink-0 ml-3">${ty}</span></label>`).join('')}
+        </div></div>
+      <button onclick="toast('Quiz publié aux élèves.')" class="px-5 py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">Publier le quiz</button></div>`;
+  }
+  if(TTAB==='roster'){
+    body=`<div class="border border-borderLight rounded-xl overflow-hidden overflow-x-auto"><table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slateSecondary text-[11px] uppercase tracking-wider"><tr>
+        <th class="text-left px-4 py-3 font-bold">Élève</th><th class="text-right px-4 py-3 font-bold">Moyenne</th>
+        <th class="text-right px-4 py-3 font-bold">Présence</th><th class="text-right px-4 py-3 font-bold">Statut</th><th class="px-4 py-3"></th></tr></thead>
+      <tbody class="divide-y divide-borderLight">${r.map(s=>`<tr class="hover:bg-slate-50">
+        <td class="px-4 py-3 font-semibold"><span class="flex items-center gap-2"><span class="h-7 w-7 rounded-full bg-kayeVioletLight/10 text-kayeVioletDark text-[10px] font-bold flex items-center justify-center">${s.ini}</span>${esc(s.name)}</span></td>
+        <td class="px-4 py-3 text-right font-bold">${s.avg}%</td><td class="px-4 py-3 text-right text-slateSecondary">${s.attendance}%</td>
+        <td class="px-4 py-3 text-right">${s.risk?'<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600">À risque</span>':'<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600">OK</span>'}</td>
+        <td class="px-4 py-3 text-right"><button onclick="toast('Message à ${esc(s.name)}')" class="text-xs font-bold text-kayeVioletLight">Message</button></td></tr>`).join('')}</tbody></table></div>`;
+  }
+  if(TTAB==='discussions'){
+    body = c.discussions.length ? `<div class="space-y-3">${c.discussions.map(d=>discussionRow(TCK,d)).join('')}</div>` : `<p class="text-xs text-slateSecondary">${t('noItems')}</p>`;
+  }
+  el('page').innerHTML=`<div class="p-6 md:p-8 max-w-6xl mx-auto fade-in">
+    ${backBtn("go('courses')")}
+    <div class="rounded-2xl overflow-hidden border border-borderLight mb-6">
+      <div class="h-2 bg-gradient-to-r ${tintGrad(c.tint)}"></div>
+      <div class="p-6 flex justify-between items-start gap-4">
+        <div><span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slateSecondary">${c.code} · ${esc(c.room)}</span>
+          <h3 class="text-xl font-black">${esc(c.title)}</h3><p class="text-xs text-slateSecondary">${esc(c.schedule)} · ${r.length} élèves</p></div>
+        <div class="text-right shrink-0"><span class="text-[10px] text-slateSecondary block font-bold uppercase mb-1">Moyenne de classe</span>
+          <span class="px-3 py-1 rounded-full text-sm font-black bg-slate-100 text-slatePrimary">${Math.round(r.reduce((s,x)=>s+x.avg,0)/r.length)}%</span></div>
+      </div></div>
+    <div class="flex gap-5 border-b border-borderLight mb-6 overflow-x-auto">
+      ${tabs.map(([k,l])=>`<button onclick="tCourseTab('${k}')" class="${TTAB===k?'subtab-active':'border-b-2 border-transparent'} pb-3 text-sm font-bold text-slateSecondary whitespace-nowrap">${l}</button>`).join('')}
+    </div>${body}</div>`;
+  crumb('Cours  /  '+c.title); applyLang(); el('page').scrollTop=0;
+}
+
+/* ---- CORRECTION RAPIDE (SpeedGrader) ---- */
+let SGI=0, SGR=[];
+function tGrading(){
+  const r=ROSTER.maths;
+  return `${h2(t('grading')+' — Devoir #4 : Bases du Calcul')}
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div class="border border-borderLight rounded-xl overflow-hidden self-start" id="sg-roster">
+      ${r.map((s,i)=>`<div onclick="loadStudentToGrade(${i})" id="rr-${i}" class="roster-row flex items-center justify-between px-3 py-3 border-b border-borderLight last:border-0 cursor-pointer hover:bg-slate-50">
+        <span class="flex items-center gap-2 min-w-0"><span class="h-7 w-7 shrink-0 rounded-full bg-kayeVioletLight/10 text-kayeVioletDark text-[10px] font-bold flex items-center justify-center">${s.ini}</span>
+        <span class="text-xs font-semibold truncate">${esc(s.name)}</span></span>
+        ${s.score!==null?'<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">'+s.score+'</span>'
+          :s.submitted?'<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">•</span>'
+          :'<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600">✕</span>'}</div>`).join('')}
+    </div>
+    <div class="lg:col-span-2 space-y-4">
+      <div class="border border-borderLight rounded-xl bg-white shadow-sm">
+        <div class="flex items-center justify-between px-4 py-2 border-b border-borderLight">
+          <span id="sg-file" class="text-xs font-mono text-slateSecondary truncate">—</span>
+          <span class="flex items-center gap-2 text-slateSecondary">
+            ${[IC.pen,'M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763']
+              .map(d=>`<button onclick="toast('Outil d’annotation activé.')" class="hover:text-kayeVioletDark"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="${d}"/></svg></button>`).join('')}
+          </span>
+        </div>
+        <div class="aspect-[4/3] bg-slate-50 flex flex-col items-center justify-center text-center p-6">
+          <svg class="h-10 w-10 text-slateSecondary mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="${FILE_ICON.pdf.match(/d="([^"]+)"/)[1]}"/></svg>
+          <span id="sg-preview" class="text-xs font-semibold text-slateSecondary">—</span>
+        </div>
+        <div class="p-3 border-t border-borderLight">
+          <textarea id="sg-comment" rows="2" placeholder="Commentaire pour l'élève…" class="w-full text-sm border border-borderLight rounded-lg px-3 py-2 focus:outline-none focus:border-kayeVioletLight"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="border border-borderLight rounded-xl p-4 bg-white shadow-sm space-y-3 self-start">
+      <h4 class="text-xs font-bold uppercase tracking-wider text-slateSecondary">Rubrique</h4>
+      <div id="sg-rubric" class="space-y-3"></div>
+      <div class="pt-3 border-t border-borderLight flex items-center justify-between">
+        <span class="text-sm font-bold">Total</span>
+        <span class="flex items-center gap-1"><input id="sg-total" type="number" min="0" max="20" class="w-14 px-2 py-1 border border-borderLight rounded-lg text-sm text-right focus:outline-none focus:border-kayeVioletLight"/><span class="text-xs text-slateSecondary">/20</span></span>
+      </div>
+      <button onclick="saveAndNext()" class="w-full py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">${t('saveNext')} →</button>
+    </div>
+  </div>`;
+}
+function loadStudentToGrade(i){
+  SGI=i; SGR=RUBRIC.map(()=>null);
+  const s=ROSTER.maths[i];
+  document.querySelectorAll('.roster-row').forEach(e=>e.classList.remove('active'));
+  const row=el('rr-'+i); if(row) row.classList.add('active');
+  if(el('sg-file')) el('sg-file').textContent = s.file || 'Aucun fichier soumis';
+  if(el('sg-preview')) el('sg-preview').textContent = s.file ? ('Page 1 sur 3 — '+s.name) : (s.name+' n’a pas encore soumis.');
+  if(el('sg-total')) el('sg-total').value = s.score!==null ? s.score : '';
+  if(el('sg-comment')) el('sg-comment').value='';
+  if(el('sg-rubric')) el('sg-rubric').innerHTML = RUBRIC.map((r,ri)=>`
+    <div><div class="flex justify-between text-xs mb-1"><span class="font-semibold">${esc(r.c)}</span><span class="text-slateSecondary">/${r.m}</span></div>
+    <div class="flex gap-1">${Array.from({length:r.m+1},(_,v)=>`<button onclick="setRubric(${ri},${v})" id="rb-${ri}-${v}" class="flex-1 text-[10px] font-bold py-1 rounded border border-borderLight text-slateSecondary hover:border-kayeVioletLight">${v}</button>`).join('')}</div></div>`).join('');
+}
+function setRubric(ri,v){
+  SGR[ri]=v;
+  RUBRIC.forEach((r,i)=>{ for(let x=0;x<=r.m;x++){ const b=el('rb-'+i+'-'+x); if(!b) continue;
+    if(i===ri) b.classList.toggle('bg-kayeVioletLight',x===v), b.classList.toggle('text-white',x===v), b.classList.toggle('border-kayeVioletLight',x===v); } });
+  el('sg-total').value = SGR.reduce((s,x)=>s+(x||0),0);
+}
+function saveAndNext(){
+  const s=ROSTER.maths[SGI], v=el('sg-total').value;
+  if(v!=='') { s.score=Number(v); }
+  const gbRow=GB[s.name]; if(gbRow && v!=='') gbRow[4]=Number(v);
+  toast(v!==''?('Note enregistrée pour '+s.name+'.'):'Aucune note saisie.');
+  renderNav();
+  if(SGI < ROSTER.maths.length-1){ render(); loadStudentToGrade(SGI+1); }
+  else { render(); loadStudentToGrade(0); toast('Correction terminée pour tous les élèves.'); }
+}
+
+/* ---- CARNET DE NOTES ---- */
+function tGradebook(){
+  const r=ROSTER.maths;
+  return h2(t('gradebook')+' — MATH-102') + `
+  <div class="flex gap-2 mb-4">
+    <button onclick="toast('Export CSV généré.')" class="px-4 py-2 rounded-lg border border-borderLight font-bold text-xs">Exporter CSV</button>
+    <button onclick="toast('Notes publiées aux élèves et aux familles.')" class="px-4 py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">Publier les notes</button>
+  </div>
+  <div class="border border-borderLight rounded-xl overflow-x-auto"><table class="w-full text-sm">
+    <thead class="bg-slate-50 text-slateSecondary text-[11px] uppercase tracking-wider"><tr>
+      <th class="text-left px-4 py-3 font-bold sticky left-0 bg-slate-50">Élève</th>
+      ${GB_COLS.map(c=>`<th class="text-right px-3 py-3 font-bold whitespace-nowrap">${c}</th>`).join('')}
+      <th class="text-right px-4 py-3 font-bold">Moyenne</th></tr></thead>
+    <tbody class="divide-y divide-borderLight">
+      ${r.map(s=>{ const sc=GB[s.name]||[], valid=sc.filter(x=>x!==null);
+        const avg=valid.length?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length):null;
+        return `<tr class="hover:bg-slate-50">
+          <td class="px-4 py-3 font-semibold whitespace-nowrap sticky left-0 bg-white">${esc(s.name)}</td>
+          ${sc.map(x=>`<td class="px-3 py-3 text-right ${x===null?'text-slateSecondary':'font-semibold'}">${x===null?'—':x}</td>`).join('')}
+          <td class="px-4 py-3 text-right"><span class="px-2.5 py-1 rounded-full text-xs font-black ${avg===null?'bg-slate-100 text-slateSecondary':avg>=16?'bg-emerald-50 text-emerald-600':avg>=12?'bg-amber-50 text-amber-600':'bg-rose-50 text-rose-600'}">${avg===null?'—':avg+'/20'}</span></td></tr>`; }).join('')}
+    </tbody></table></div>`;
+}
+
+/* ---- CLASSE EN DIRECT ---- */
+const POLL=[{l:'2x',v:11},{l:'2x²',v:3},{l:'x',v:4}];
+function tLiveClass(){
+  const total=POLL.reduce((s,p)=>s+p.v,0);
+  return h2(t('liveClass')+' — MATH-102') + `
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-4">
+      <div class="aspect-video bg-slatePrimary rounded-xl flex flex-col items-center justify-center text-white gap-2 relative">
+        <span class="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded bg-rose-500 text-[10px] font-black uppercase"><span class="h-1.5 w-1.5 rounded-full bg-white"></span>En direct</span>
+        <svg class="h-10 w-10 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="${IC.video}"/></svg>
+        <span class="text-xs font-semibold opacity-80">18 élèves connectés</span>
+        <div class="flex gap-2 mt-3">
+          ${['Micro','Caméra','Partager l’écran','Terminer'].map(b=>`<button onclick="toast('${b} — action simulée.')" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-bold transition">${b}</button>`).join('')}
+        </div>
+      </div>
+      <div class="border border-borderLight rounded-xl p-4 bg-white shadow-sm">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slateSecondary mb-3">Sondage en direct</h4>
+        <p class="text-sm font-semibold mb-3">Quelle est la dérivée de x² ?</p>
+        <div class="space-y-2">${POLL.map((o,i)=>{const p=Math.round(o.v/total*100);
+          return `<button onclick="POLL[${i}].v++;render()" class="w-full text-left">
+            <div class="flex justify-between text-xs font-semibold mb-1"><span>${esc(o.l)}</span><span class="text-slateSecondary">${p}% · ${o.v}</span></div>
+            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden"><div class="bg-kayeVioletLight h-full transition-all" style="width:${p}%"></div></div></button>`;}).join('')}</div>
+      </div>
+    </div>
+    <div class="space-y-4">
+      <div class="border border-borderLight rounded-xl p-4 bg-white shadow-sm">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slateSecondary mb-3">Salles de groupe</h4>
+        <div class="space-y-2">${[['Salle 1',['PD','JM']],['Salle 2',['SL','WC']],['Salle 3',['MA','FS']]].map(([n,ini])=>`
+          <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50">
+            <span class="text-xs font-bold">${n}</span>
+            <span class="flex -space-x-2">${ini.map(i=>`<span class="h-6 w-6 rounded-full bg-kayeVioletLight/10 text-kayeVioletDark text-[9px] font-bold flex items-center justify-center border-2 border-white">${i}</span>`).join('')}</span></div>`).join('')}</div>
+        <button onclick="toast('Salles de groupe ouvertes.')" class="mt-3 w-full py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">Ouvrir les salles</button>
+      </div>
+      <div class="border border-borderLight rounded-xl p-4 bg-white shadow-sm">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slateSecondary mb-3">Partage de fichiers</h4>
+        <div class="space-y-2 text-xs">${['syllabus_math102.pdf','chapitre3_derivees.pdf'].map(f=>`
+          <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-slate-50"><svg class="h-4 w-4 text-slateSecondary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">${FILE_ICON.pdf}</svg><span class="truncate">${f}</span></div>`).join('')}</div>
+        <button onclick="toast('Fichier partagé avec la classe.')" class="mt-3 w-full py-2 rounded-lg border border-borderLight font-bold text-xs">+ Partager un fichier</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---- ASSISTANT IA ---- */
+let AI_SHOWN=false;
+function tAiAssist(){
+  return h2(t('aiAssist')) + `
+  <div class="border border-borderLight rounded-xl p-5 bg-white shadow-sm space-y-3 mb-6">
+    <label class="block text-xs font-bold text-slateSecondary">Décrivez le module que vous voulez créer</label>
+    <textarea id="ai-prompt" rows="3" class="w-full text-sm border border-borderLight rounded-lg px-3 py-2 focus:outline-none focus:border-kayeVioletLight">Un module de 2 semaines sur les dérivées et limites, avec un quiz de validation et une discussion de classe.</textarea>
+    <button onclick="AI_SHOWN=true;render()" class="px-5 py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">✦ Générer avec l'IA</button>
+  </div>
+  ${AI_SHOWN?`<div class="border border-kayeVioletLight rounded-xl p-5 bg-kayeVioletLight/5 space-y-4">
+    <span class="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-kayeOrange/10 text-kayeOrange">Aperçu généré par IA — à réviser avant publication</span>
+    <div><h4 class="font-bold text-sm">Module proposé : Dérivées et limites</h4>
+      <ul class="mt-2 space-y-1 text-xs text-slateSecondary list-disc list-inside">
+        <li>Leçon 1 : Définition intuitive de la limite</li><li>Leçon 2 : Règles de dérivation de base</li><li>Leçon 3 : Applications aux taux de variation</li></ul></div>
+    <div><h4 class="font-bold text-sm">Quiz proposé : Validation — Dérivées</h4>
+      <p class="text-xs text-slateSecondary mt-1">8 questions (QCM et réponse courte), banque randomisée, 20 minutes.</p></div>
+    <div><h4 class="font-bold text-sm">Discussion proposée</h4>
+      <p class="text-xs text-slateSecondary mt-1">« Donnez un exemple concret où un taux de variation instantané est utile. »</p></div>
+    <div class="flex gap-2">
+      <button onclick="toast('Brouillon ajouté à MATH-102.')" class="px-5 py-2 rounded-lg bg-slatePrimary hover:bg-slate-800 text-white font-bold text-xs transition">Ajouter au cours</button>
+      <button onclick="AI_SHOWN=false;render()" class="px-5 py-2 rounded-lg border border-borderLight font-bold text-xs">Régénérer</button>
+    </div></div>`:''}`;
+}
+
+/* ---- ANALYTIQUE ENSEIGNANT ---- */
+function tAnalytics(){
+  const r=ROSTER.maths;
+  const bands=[['16–20',r.filter(s=>s.avg>=80).length],['12–15',r.filter(s=>s.avg>=60&&s.avg<80).length],['0–11',r.filter(s=>s.avg<60).length]];
+  const max=Math.max(...bands.map(b=>b[1]),1);
+  return h2(t('analytics')+' — MATH-102') + `
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+    ${[[Math.round(r.reduce((s,x)=>s+x.avg,0)/r.length)+'%','Moyenne de classe'],[Math.round(r.reduce((s,x)=>s+x.attendance,0)/r.length)+'%','Présence moyenne'],
+      [r.filter(s=>s.submitted).length+'/'+r.length,'Taux de soumission'],[r.filter(s=>s.risk).length,'Élèves à risque']]
+      .map(([v,l])=>`<div class="bg-slate-50 rounded-xl p-4"><span class="block text-2xl font-black">${v}</span><span class="text-xs text-slateSecondary">${l}</span></div>`).join('')}
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="border border-borderLight rounded-xl p-5">
+      <h4 class="text-xs font-bold uppercase tracking-wider text-slateSecondary mb-4">Répartition des moyennes</h4>
+      <div class="space-y-3">${bands.map(([l,n])=>`
+        <div><div class="flex justify-between text-xs mb-1"><span class="font-semibold">${l}</span><span class="text-slateSecondary">${n} élèves</span></div>
+        <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden"><div class="bg-gradient-to-r from-kayeVioletLight to-kayeOrange h-full" style="width:${n/max*100}%"></div></div></div>`).join('')}</div>
+    </div>
+    <div class="border border-borderLight rounded-xl p-5">
+      <h4 class="text-xs font-bold uppercase tracking-wider text-slateSecondary mb-4">Moyenne par évaluation</h4>
+      <div class="flex items-end gap-3 h-32">${GB_COLS.map((c,ci)=>{
+        const vals=Object.values(GB).map(a=>a[ci]).filter(x=>x!==null);
+        const av=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+        return `<div class="flex-1 flex flex-col items-center gap-1"><div class="w-full bg-gradient-to-t from-kayeVioletLight to-kayeVioletDark rounded-t" style="height:${av/20*100}%"></div>
+          <span class="text-[9px] text-slateSecondary text-center leading-tight">${c}</span></div>`;}).join('')}</div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   CONSOLE ADMINISTRATEUR
+   ============================================================ */
+function aDashboard(){
+  const students=USERS.filter(u=>u.role==='Étudiant').length, teachers=USERS.filter(u=>u.role==='Enseignant').length;
+  const seats=ENROLLMENTS.reduce((s,e)=>s+e.capacity,0), filled=ENROLLMENTS.reduce((s,e)=>s+e.students,0);
+  return `
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-kayeVioletDark via-kayeVioletLight to-kayeVioletDark p-8 mb-8">
+    <svg class="absolute -right-16 -top-16 opacity-15" width="320" height="320" viewBox="0 0 200 200"><polygon points="100,38 38,172 97,172" fill="#fff"/><polygon points="100,38 103,172 162,172" fill="#fff"/></svg>
+    <span class="relative inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-white/15 text-white uppercase tracking-wide mb-3">Automne 2026 · Semaine 4</span>
+    <h1 class="relative text-3xl font-black text-white">${LANG==='fr'?'Console administrateur':'Konsòl administratè'}</h1>
+    <p class="relative text-sm text-white/80 mt-1">Saint-François-Xavier (SFXO)</p>
+    <div class="relative grid grid-cols-2 md:grid-cols-4 gap-3 mt-7">
+      ${statPill(students,LANG==='fr'?'Étudiants':'Elèv')}${statPill(teachers,LANG==='fr'?'Enseignants':'Pwofesè')}
+      ${statPill(ENROLLMENTS.length,LANG==='fr'?'Cours actifs':'Klas aktif')}${statPill(Math.round(filled/seats*100)+'%',LANG==='fr'?'Places occupées':'Plas pran')}
+    </div>
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <div class="lg:col-span-2">
+      ${h2(LANG==='fr'?'Actions requises':'Aksyon nesesè')}
+      <div class="space-y-3">
+        ${USERS.filter(u=>u.status==='en attente').map(u=>`
+          <div class="p-4 rounded-xl bg-white border-l-4 border-l-amber-400 border-y border-r border-borderLight shadow-sm flex justify-between items-center">
+            <div><h4 class="font-bold text-sm">${esc(u.name)} — compte en attente</h4>
+              <span class="text-xs text-slateSecondary">${esc(u.role)} · ${esc(u.email)}</span></div>
+            <span class="flex gap-2"><button onclick="approveUser('${esc(u.email)}')" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs transition">Approuver</button>
+            <button onclick="toast('Invitation renvoyée.')" class="px-3 py-1.5 rounded-lg border border-borderLight font-bold text-xs">Relancer</button></span></div>`).join('') || `<p class="text-xs text-slateSecondary">${t('noItems')}</p>`}
+        ${ENROLLMENTS.filter(e=>e.students/e.capacity>0.85).map(e=>`
+          <div class="p-4 rounded-xl bg-white border-l-4 border-l-rose-400 border-y border-r border-borderLight shadow-sm flex justify-between items-center">
+            <div><h4 class="font-bold text-sm">${esc(e.course)} — presque plein</h4>
+              <span class="text-xs text-slateSecondary">${e.students}/${e.capacity} places</span></div>
+            <button onclick="toast('Capacité augmentée.')" class="px-3 py-1.5 rounded-lg border border-borderLight font-bold text-xs">Augmenter</button></div>`).join('')}
+      </div>
+    </div>
+    <div>
+      ${h2(LANG==='fr'?'Journal d’activité':'Jounal aktivite')}
+      <div class="space-y-3">${AUDIT.map(a=>`
+        <div class="p-3 rounded-xl border border-borderLight bg-white shadow-sm">
+          <p class="text-xs leading-relaxed"><span class="font-bold">${esc(a.who)}</span> — ${esc(a.what)}</p>
+          <span class="text-[10px] text-slateSecondary">${esc(a.when)}</span></div>`).join('')}</div>
+    </div>
+  </div>
+  ${h2(t('enrollments'))}
+  ${enrollTable()}`;
+}
+function approveUser(email){ const u=USERS.find(x=>x.email===email); if(u){ u.status='actif'; u.last='à l’instant'; toast(u.name+' a été approuvé.'); renderNav(); render(); } }
+function enrollTable(){
+  return `<div class="border border-borderLight rounded-xl overflow-hidden overflow-x-auto"><table class="w-full text-sm">
+    <thead class="bg-slate-50 text-slateSecondary text-[11px] uppercase tracking-wider"><tr>
+      <th class="text-left px-4 py-3 font-bold">Cours</th><th class="text-left px-4 py-3 font-bold">Enseignant</th>
+      <th class="text-left px-4 py-3 font-bold">Occupation</th><th class="text-right px-4 py-3 font-bold">Places</th></tr></thead>
+    <tbody class="divide-y divide-borderLight">${ENROLLMENTS.map(e=>{const p=Math.round(e.students/e.capacity*100);
+      return `<tr class="hover:bg-slate-50"><td class="px-4 py-3 font-semibold">${esc(e.course)}</td>
+        <td class="px-4 py-3 text-slateSecondary">${esc(e.teacher)}</td>
+        <td class="px-4 py-3"><div class="w-full max-w-[160px] bg-slate-100 h-1.5 rounded-full overflow-hidden"><div class="${p>85?'bg-rose-400':'bg-kayeVioletLight'} h-full" style="width:${p}%"></div></div></td>
+        <td class="px-4 py-3 text-right font-mono text-xs">${e.students}/${e.capacity}</td></tr>`;}).join('')}</tbody></table></div>`;
+}
+let USER_FILTER='Tous';
+function aUsers(){
+  const roles=['Tous','Étudiant','Enseignant','Administrateur'];
+  const list=USER_FILTER==='Tous'?USERS:USERS.filter(u=>u.role===USER_FILTER);
+  return h2(t('users')) + `
+  <div class="flex flex-wrap items-center gap-2 mb-4">
+    ${roles.map(r=>`<button onclick="USER_FILTER='${r}';render()" class="px-3 py-1.5 rounded-lg text-xs font-bold border ${USER_FILTER===r?'border-kayeVioletLight bg-kayeVioletLight/10 text-kayeVioletDark':'border-borderLight text-slateSecondary'}">${r}</button>`).join('')}
+    <button onclick="toast('Formulaire d’invitation — maquette.')" class="ml-auto px-4 py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">+ Inviter un utilisateur</button>
+    <button onclick="toast('Import CSV — maquette.')" class="px-4 py-2 rounded-lg border border-borderLight font-bold text-xs">Importer CSV</button>
+  </div>
+  <div class="border border-borderLight rounded-xl overflow-hidden overflow-x-auto"><table class="w-full text-sm">
+    <thead class="bg-slate-50 text-slateSecondary text-[11px] uppercase tracking-wider"><tr>
+      <th class="text-left px-4 py-3 font-bold">Nom</th><th class="text-left px-4 py-3 font-bold">Rôle</th>
+      <th class="text-left px-4 py-3 font-bold">Identifiant</th><th class="text-left px-4 py-3 font-bold">Dernière activité</th>
+      <th class="text-left px-4 py-3 font-bold">Statut</th><th class="px-4 py-3"></th></tr></thead>
+    <tbody class="divide-y divide-borderLight">${list.map(u=>`<tr onclick="openUser('${esc(u.email)}')" class="hover:bg-slate-50 cursor-pointer">
+      <td class="px-4 py-3 font-semibold"><span class="flex items-center gap-2"><span class="h-7 w-7 rounded-full bg-kayeVioletLight/10 text-kayeVioletDark text-[10px] font-bold flex items-center justify-center">${u.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</span>${esc(u.name)}</span></td>
+      <td class="px-4 py-3 text-slateSecondary">${esc(u.role)}</td><td class="px-4 py-3 font-mono text-xs">${esc(u.id)}</td>
+      <td class="px-4 py-3 text-slateSecondary text-xs">${esc(u.last)}</td>
+      <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${u.status==='actif'?'bg-emerald-50 text-emerald-600':u.status==='en attente'?'bg-amber-50 text-amber-600':'bg-slate-100 text-slateSecondary'}">${u.status}</span></td>
+      <td class="px-4 py-3 text-right"><span class="text-xs font-bold text-kayeVioletLight">Gérer →</span></td></tr>`).join('')}</tbody></table></div>`;
+}
+function openUser(email){
+  const u=USERS.find(x=>x.email===email);
+  el('page').innerHTML=`<div class="p-6 md:p-8 max-w-3xl mx-auto fade-in">${backBtn("go('users')")}
+    <div class="flex items-center gap-4 border-b border-borderLight pb-5 mb-6">
+      <div class="h-14 w-14 rounded-full bg-kayeVioletLight text-white font-black flex items-center justify-center text-lg">${u.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+      <div><h3 class="text-xl font-black">${esc(u.name)}</h3><p class="text-xs text-slateSecondary">${esc(u.role)} · ${esc(u.email)} · ${esc(u.id)}</p></div>
+      <span class="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold ${u.status==='actif'?'bg-emerald-50 text-emerald-600':u.status==='en attente'?'bg-amber-50 text-amber-600':'bg-slate-100 text-slateSecondary'}">${u.status}</span>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      ${field('Nom complet',u.name)}${field('Email',u.email,'email')}${field('Identifiant',u.id)}
+      <div><label class="block text-xs font-bold text-slateSecondary mb-1">Rôle</label>
+        <select class="w-full px-3 py-2 border border-borderLight rounded-lg text-sm"><option ${u.role==='Étudiant'?'selected':''}>Étudiant</option><option ${u.role==='Enseignant'?'selected':''}>Enseignant</option><option ${u.role==='Administrateur'?'selected':''}>Administrateur</option></select></div>
+    </div>
+    <div class="border border-borderLight rounded-xl p-4 mb-6 divide-y divide-borderLight">
+      ${toggleRow('Compte actif',u.status==='actif')}${toggleRow('Authentification à deux facteurs',true)}${toggleRow('Notifications par SMS',false)}
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button onclick="toast('Modifications enregistrées.')" class="px-5 py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">Enregistrer</button>
+      <button onclick="toast('Lien de réinitialisation envoyé.')" class="px-5 py-2 rounded-lg border border-borderLight font-bold text-xs">Réinitialiser le mot de passe</button>
+      <button onclick="toast('Compte désactivé.')" class="px-5 py-2 rounded-lg border border-rose-200 text-rose-600 font-bold text-xs">Désactiver</button>
+    </div></div>`;
+  crumb('Utilisateurs  /  '+u.name); applyLang();
+}
+function aEnrollments(){
+  return h2(t('enrollments')) + `
+  <div class="flex flex-wrap gap-2 mb-4">
+    <button onclick="toast('Formulaire d’inscription — maquette.')" class="px-4 py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">+ Inscrire un élève</button>
+    <button onclick="toast('Export du registre généré.')" class="px-4 py-2 rounded-lg border border-borderLight font-bold text-xs">Exporter le registre</button>
+  </div>${enrollTable()}
+  <div class="mt-6">${h2('Élèves par cours — MATH-102')}
+    <div class="border border-borderLight rounded-xl divide-y divide-borderLight">
+      ${ROSTER.maths.map(s=>`<div class="flex items-center justify-between px-4 py-3">
+        <span class="flex items-center gap-2"><span class="h-7 w-7 rounded-full bg-kayeVioletLight/10 text-kayeVioletDark text-[10px] font-bold flex items-center justify-center">${s.ini}</span>
+        <span class="text-sm font-semibold">${esc(s.name)}</span></span>
+        <button onclick="toast('${esc(s.name)} retiré du cours.')" class="text-xs font-bold text-rose-500">Retirer</button></div>`).join('')}
+    </div></div>`;
+}
+function aCourses(){
+  return h2(t('courses')) + `
+  <button onclick="toast('Assistant de création de cours — maquette.')" class="mb-4 px-4 py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">+ Créer un cours</button>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    ${Object.keys(COURSES).map(k=>{const c=COURSES[k], e=ENROLLMENTS.find(x=>x.course.startsWith(c.code));
+      return `<div class="rounded-xl border border-borderLight bg-white shadow-sm overflow-hidden">
+        <div class="h-2 bg-gradient-to-r ${tintGrad(c.tint)}"></div>
+        <div class="p-5 space-y-3">
+          <div class="flex justify-between items-start">
+            <div class="h-11 w-11 rounded-xl flex items-center justify-center ${tintBg(c.tint)}"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">${c.icon}</svg></div>
+            <span class="px-2.5 py-1 rounded-full text-xs font-black bg-slate-100 text-slateSecondary">${e?e.students+'/'+e.capacity:'—'}</span></div>
+          <div><h3 class="text-base font-bold">${esc(c.title)}</h3><p class="text-xs text-slateSecondary mt-0.5">${c.code} · ${esc(c.prof)}</p>
+            <p class="text-xs text-slateSecondary">${esc(c.schedule)} · ${esc(c.room)}</p></div>
+          <div class="flex gap-2 pt-1">
+            <button onclick="toast('Édition du cours ${c.code}.')" class="px-3 py-1.5 rounded-lg border border-borderLight font-bold text-[11px]">Modifier</button>
+            <button onclick="toast('Cours archivé.')" class="px-3 py-1.5 rounded-lg border border-borderLight font-bold text-[11px] text-slateSecondary">Archiver</button></div>
+        </div></div>`;}).join('')}
+  </div>`;
+}
+function aReports(){
+  const students=ROSTER.maths;
+  const attend=Math.round(students.reduce((s,x)=>s+x.attendance,0)/students.length);
+  return h2(t('reports')) + `
+  <div class="flex flex-wrap gap-2 mb-6">
+    ${['Rapport de notes','Rapport de présence','Taux de soumission','Activité des connexions'].map(r=>`
+      <button onclick="toast('${r} généré en PDF.')" class="px-4 py-2 rounded-lg border border-borderLight font-bold text-xs hover:border-kayeVioletLight">↓ ${r}</button>`).join('')}
+  </div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+    ${[[attend+'%','Présence moyenne'],[Math.round(students.filter(s=>s.submitted).length/students.length*100)+'%','Taux de soumission'],
+       [gpaPct()+'%','Moyenne établissement'],[students.filter(s=>s.risk).length,'Élèves à risque']]
+      .map(([v,l])=>`<div class="bg-slate-50 rounded-xl p-4"><span class="block text-2xl font-black">${v}</span><span class="text-xs text-slateSecondary">${l}</span></div>`).join('')}
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="border border-borderLight rounded-xl p-5">
+      <h4 class="text-xs font-bold uppercase tracking-wider text-slateSecondary mb-4">Moyenne par cours</h4>
+      <div class="space-y-3">${Object.keys(COURSES).map(k=>{const c=COURSES[k];
+        return `<div><div class="flex justify-between text-xs mb-1"><span class="font-semibold">${c.code}</span><span class="text-slateSecondary">${c.pct}%</span></div>
+        <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden"><div class="bg-gradient-to-r ${tintGrad(c.tint)} h-full" style="width:${c.pct}%"></div></div></div>`;}).join('')}</div>
+    </div>
+    <div class="border border-borderLight rounded-xl p-5">
+      <h4 class="text-xs font-bold uppercase tracking-wider text-slateSecondary mb-4">Présence par élève — MATH-102</h4>
+      <div class="flex items-end gap-2 h-32">${students.map(s=>`
+        <div class="flex-1 flex flex-col items-center gap-1"><div class="w-full ${s.attendance<75?'bg-rose-400':'bg-kayeVioletLight'} rounded-t" style="height:${s.attendance}%"></div>
+        <span class="text-[9px] text-slateSecondary">${s.ini}</span></div>`).join('')}</div>
+    </div>
+  </div>`;
+}
+function aIntegrations(){
+  return h2(t('integrations')) + `
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    ${INTEGRATIONS.map((it,i)=>`<div class="p-5 border border-borderLight rounded-xl bg-white shadow-sm flex justify-between items-start gap-4">
+      <div><h4 class="text-sm font-bold">${esc(it.name)}</h4><p class="text-xs text-slateSecondary mt-0.5">${esc(it.desc)}</p>
+        <button onclick="toast('Configuration de ${esc(it.name)}.')" class="mt-2 text-xs font-bold text-kayeVioletLight">Configurer →</button></div>
+      <label class="relative inline-block w-11 h-6 cursor-pointer shrink-0" onclick="INTEGRATIONS[${i}].on=!INTEGRATIONS[${i}].on;setTimeout(render,120)">
+        <input type="checkbox" class="toggle-input sr-only" ${it.on?'checked':''}><div class="toggle-track absolute inset-0 bg-slate-200 rounded-full"></div></label>
+    </div>`).join('')}
+  </div>
+  <div class="mt-6 p-5 border border-borderLight rounded-xl bg-slate-50">
+    <h4 class="text-xs font-bold uppercase tracking-wider text-slateSecondary mb-2">Clé API de l'établissement</h4>
+    <div class="flex gap-2"><input readonly value="kaye_sk_sfxo_2026_••••••••••••" class="flex-1 px-3 py-2 border border-borderLight rounded-lg text-xs font-mono bg-white"/>
+      <button onclick="toast('Clé copiée.')" class="px-4 py-2 rounded-lg border border-borderLight font-bold text-xs">Copier</button>
+      <button onclick="toast('Nouvelle clé générée.')" class="px-4 py-2 rounded-lg bg-kayeVioletLight text-white font-bold text-xs">Régénérer</button></div>
+  </div>`;
+}
+function aSystem(){
+  return h2(t('system')) + `
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+    ${[['99,8%','Disponibilité (30j)'],['1,4 Go','Stockage utilisé'],['il y a 9h','Dernière sauvegarde'],['v2.4.1','Version']]
+      .map(([v,l])=>`<div class="bg-slate-50 rounded-xl p-4"><span class="block text-xl font-black">${v}</span><span class="text-xs text-slateSecondary">${l}</span></div>`).join('')}
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="border border-borderLight rounded-xl p-5">
+      <h4 class="text-xs font-bold uppercase tracking-wider text-slateSecondary mb-3">Paramètres de l'établissement</h4>
+      <div class="space-y-4">${field("Nom de l’établissement",'Saint-François-Xavier')}${field('Code','SFXO')}
+        <div><label class="block text-xs font-bold text-slateSecondary mb-1">Échelle de notation</label>
+          <select class="w-full px-3 py-2 border border-borderLight rounded-lg text-sm"><option>Sur 20 (Haïti)</option><option>Sur 100</option><option>Lettres (A–F)</option></select></div>
+        <div><label class="block text-xs font-bold text-slateSecondary mb-1">Trimestre actif</label>
+          <select class="w-full px-3 py-2 border border-borderLight rounded-lg text-sm"><option>Automne 2026</option><option>Printemps 2027</option></select></div>
+      </div>
+      <button onclick="toast('Paramètres enregistrés.')" class="mt-4 px-5 py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">Enregistrer</button>
+    </div>
+    <div class="space-y-6">
+      <div class="border border-borderLight rounded-xl p-5">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slateSecondary mb-1">Sécurité et conformité</h4>
+        <div class="divide-y divide-borderLight">${toggleRow('Exiger la 2FA pour le personnel',true)}${toggleRow('Journal d’audit détaillé',true)}${toggleRow('Mode faible bande passante',true)}${toggleRow('Autoriser l’inscription libre',false)}</div>
+      </div>
+      <div class="border border-borderLight rounded-xl p-5">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slateSecondary mb-3">Maintenance</h4>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="toast('Sauvegarde lancée.')" class="px-4 py-2 rounded-lg border border-borderLight font-bold text-xs">Sauvegarder maintenant</button>
+          <button onclick="toast('Cache vidé.')" class="px-4 py-2 rounded-lg border border-borderLight font-bold text-xs">Vider le cache</button>
+          <button onclick="toast('Mode maintenance activé.')" class="px-4 py-2 rounded-lg border border-amber-200 text-amber-700 font-bold text-xs">Mode maintenance</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mt-6">${h2('Journal d’audit')}
+    <div class="border border-borderLight rounded-xl divide-y divide-borderLight">
+      ${AUDIT.map(a=>`<div class="px-4 py-3 flex justify-between items-center">
+        <p class="text-xs"><span class="font-bold">${esc(a.who)}</span> — ${esc(a.what)}</p>
+        <span class="text-[10px] text-slateSecondary shrink-0 ml-3">${esc(a.when)}</span></div>`).join('')}
+    </div></div>`;
+}
+
+applyLang();
+</script>
+</body>
+</html>
