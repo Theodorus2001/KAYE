@@ -1,6 +1,6 @@
 # KAYE
 
-**A learning management system built for Haiti **
+A learning management system built for Haiti
 
 *Kaye* means "notebook" in Kreyòl. That's the idea: the notebook every Haitian student already carries, made digital, in the languages they actually speak.
 
@@ -8,7 +8,7 @@
 
 ## Why this exists
 
-Education technology has transformed how schools work over the last decade. Canvas, Blackboard, Moodle and Google Classroom now run the daily rhythm of millions of classrooms — assignments posted and collected, grades tracked, parents kept informed, teachers freed from paperwork.
+Education technology has transformed how schools work over the last decade. Canvas, Blackboard, Moodle and Google Classroom now run the daily rhythm of millions of classrooms assignments posted and collected, grades tracked, parents kept informed, teachers freed from paperwork.
 
 Haitian schools have largely been left out of that shift. Not because the need is smaller, but because these platforms were never designed with Haiti in mind:
 
