@@ -37,7 +37,7 @@ Its purpose is to make the concept tangible. A teacher, a school director or a f
 Open `index.html` in any browser. If GitHub Pages is enabled on this repository, the live version is at:
 
 ```
-https://<your-username>.github.io/kaye-lms/
+https://<your-username>.github.io/KAYE/
 ```
 
 The login screen has three role tabs. Pick one, then enter any email and any password. There is no authentication behind it, so anything you type will work.
