@@ -2,13 +2,65 @@
 -- KAYE LMS - Database schema for Supabase (PostgreSQL)
 -- ============================================================
 --
--- Paste this into the Supabase SQL editor and run it.
--- You can run it in stages: each STAGE block below is
--- self contained and matches a stage in BACKEND-GUIDE.md.
+-- HOW TO USE
+--   Paste the whole file into the Supabase SQL Editor and Run.
+--   "Success. No rows returned" is the correct result.
 --
--- Read the SECURITY NOTES near the bottom before putting
--- any real student data in this database.
+--   You can run this file as many times as you like. It clears
+--   the old KAYE tables first, so it never fails with
+--   "relation already exists".
+--
+-- WARNING
+--   Running this DELETES all KAYE data: courses, grades,
+--   submissions, messages. It does NOT delete the login accounts
+--   under Authentication, those are safe.
+--
+--   Once real student data is in here, stop re-running this file
+--   and make changes with ALTER TABLE instead.
+--
+-- Read the SECURITY NOTES at the bottom before storing anything real.
 -- ============================================================
+
+
+-- ============================================================
+-- CLEAN SLATE
+-- ============================================================
+
+drop trigger if exists on_auth_user_created on auth.users;
+
+drop policy if exists sub_files_own      on storage.objects;
+drop policy if exists sub_files_teacher  on storage.objects;
+drop policy if exists brief_read         on storage.objects;
+drop policy if exists brief_write        on storage.objects;
+
+drop table if exists discussion_replies cascade;
+drop table if exists discussions        cascade;
+drop table if exists announcements      cascade;
+drop table if exists messages           cascade;
+drop table if exists quiz_attempts      cascade;
+drop table if exists quiz_questions     cascade;
+drop table if exists quizzes            cascade;
+drop table if exists submissions        cascade;
+drop table if exists assignments        cascade;
+drop table if exists module_items       cascade;
+drop table if exists modules            cascade;
+drop table if exists attendance         cascade;
+drop table if exists enrollments        cascade;
+drop table if exists courses            cascade;
+drop table if exists profiles           cascade;
+drop table if exists institutions       cascade;
+
+drop function if exists handle_new_user()      cascade;
+drop function if exists my_role()              cascade;
+drop function if exists my_institution()       cascade;
+drop function if exists teaches(uuid)          cascade;
+drop function if exists enrolled_in(uuid)      cascade;
+drop function if exists submit_quiz_attempt(uuid, jsonb) cascade;
+
+drop type if exists user_role         cascade;
+drop type if exists item_kind         cascade;
+drop type if exists submission_status cascade;
+drop type if exists question_kind     cascade;
 
 
 -- ============================================================
@@ -24,18 +76,17 @@ create table institutions (
   created_at  timestamptz not null default now()
 );
 
--- Roles a person can hold.
 create type user_role as enum ('student', 'teacher', 'admin');
 
 -- profiles extends Supabase's built in auth.users table.
--- auth.users holds the email and password; profiles holds
--- everything KAYE needs to know about the person.
+-- auth.users holds email and password; profiles holds everything
+-- KAYE needs to know about the person.
 create table profiles (
   id             uuid primary key references auth.users(id) on delete cascade,
   institution_id uuid not null references institutions(id) on delete restrict,
   role           user_role not null,
   full_name      text not null,
-  student_number text,                        -- e.g. 'SFXO-2026-09', null for staff
+  student_number text,                        -- 'SFXO-2026-09', null for staff
   phone          text,                        -- for SMS notifications
   lang           text not null default 'fr',  -- 'fr' or 'ht'
   is_active      boolean not null default true,
@@ -45,22 +96,49 @@ create table profiles (
 create index on profiles (institution_id);
 create index on profiles (role);
 
+
+-- The school has to exist before the trigger below can fall back to it.
+insert into institutions (name, code)
+values ('Saint-François-Xavier', 'SFXO');
+
+
 -- When someone signs up, create their profile row automatically.
--- Role and institution are passed in the signup metadata.
+--
+-- This function must never raise an error. It runs inside the same
+-- transaction that creates the account, so if it fails, creating the
+-- account fails with it. That includes adding users by hand in the
+-- Supabase dashboard, where there is no metadata at all, so every
+-- value needs a fallback.
 create or replace function handle_new_user()
 returns trigger
 language plpgsql
 security definer set search_path = public
 as $$
+declare
+  v_inst uuid;
 begin
+  v_inst := coalesce(
+    nullif(new.raw_user_meta_data ->> 'institution_id', '')::uuid,
+    (select id from institutions order by created_at limit 1)
+  );
+
+  if v_inst is null then
+    return new;              -- no school yet, skip the profile
+  end if;
+
   insert into profiles (id, institution_id, role, full_name)
   values (
     new.id,
-    (new.raw_user_meta_data ->> 'institution_id')::uuid,
-    coalesce((new.raw_user_meta_data ->> 'role')::user_role, 'student'),
-    coalesce(new.raw_user_meta_data ->> 'full_name', new.email)
-  );
+    v_inst,
+    coalesce(nullif(new.raw_user_meta_data ->> 'role','')::user_role, 'student'),
+    coalesce(nullif(new.raw_user_meta_data ->> 'full_name',''), new.email)
+  )
+  on conflict (id) do nothing;
+
   return new;
+
+exception when others then
+  return new;                -- never block signup over a profile problem
 end;
 $$;
 
@@ -69,13 +147,23 @@ create trigger on_auth_user_created
   for each row execute function handle_new_user();
 
 
+-- Any accounts that already exist under Authentication get a profile
+-- now, so re-running this file does not orphan them.
+insert into profiles (id, institution_id, role, full_name)
+select u.id,
+       (select id from institutions order by created_at limit 1),
+       'student',
+       coalesce(u.raw_user_meta_data ->> 'full_name', u.email)
+from auth.users u
+on conflict (id) do nothing;
+
+
 -- ------------------------------------------------------------
 -- Helper functions used by the security policies.
 --
--- These are SECURITY DEFINER, which means they bypass row
--- level security when they run. That is deliberate and
--- necessary: without it, a policy on `profiles` that needs to
--- read `profiles` would call itself forever.
+-- SECURITY DEFINER means they ignore row level security while they
+-- run. That is necessary: without it, a policy on profiles that
+-- needs to read profiles would call itself forever.
 -- ------------------------------------------------------------
 
 create or replace function my_role()
@@ -88,10 +176,9 @@ returns uuid
 language sql stable security definer set search_path = public
 as $$ select institution_id from profiles where id = auth.uid() $$;
 
--- Two more helpers, teaches() and enrolled_in(), are defined at the
--- end of STAGE 2. They have to come after the courses and enrollments
--- tables exist, because Postgres checks a function body when the
--- function is created.
+-- teaches() and enrolled_in() come at the end of STAGE 2, because
+-- Postgres checks a function body when the function is created and
+-- they need the courses and enrollments tables to exist first.
 
 
 -- ============================================================
@@ -130,7 +217,7 @@ create table enrollments (
 create index on enrollments (student_id);
 create index on enrollments (course_id);
 
--- Attendance, used for the at risk flag in the teacher dashboard.
+-- Attendance, used for the at risk flag on the teacher dashboard.
 create table attendance (
   id         uuid primary key default gen_random_uuid(),
   course_id  uuid not null references courses(id) on delete cascade,
@@ -141,12 +228,6 @@ create table attendance (
 );
 
 
--- ------------------------------------------------------------
--- The remaining two helper functions. These had to wait until
--- courses and enrollments existed.
--- ------------------------------------------------------------
-
--- Does the signed in user teach this course?
 create or replace function teaches(course uuid)
 returns boolean
 language sql stable security definer set search_path = public
@@ -154,7 +235,6 @@ as $$ select exists (
   select 1 from courses c where c.id = course and c.teacher_id = auth.uid()
 ) $$;
 
--- Is the signed in user enrolled in this course?
 create or replace function enrolled_in(course uuid)
 returns boolean
 language sql stable security definer set search_path = public
@@ -165,17 +245,17 @@ as $$ select exists (
 
 
 -- ============================================================
--- STAGE 2b: course content (modules and their items)
+-- STAGE 2b: course content
 -- ============================================================
 
 create table modules (
-  id          uuid primary key default gen_random_uuid(),
-  course_id   uuid not null references courses(id) on delete cascade,
-  title       text not null,
-  weeks_label text,                            -- 'Semaines 1–4'
-  position    int  not null default 0,
+  id           uuid primary key default gen_random_uuid(),
+  course_id    uuid not null references courses(id) on delete cascade,
+  title        text not null,
+  weeks_label  text,                           -- 'Semaines 1 à 4'
+  position     int  not null default 0,
   is_published boolean not null default false,
-  created_at  timestamptz not null default now()
+  created_at   timestamptz not null default now()
 );
 
 create index on modules (course_id);
@@ -183,15 +263,15 @@ create index on modules (course_id);
 create type item_kind as enum ('page', 'video', 'quiz', 'assignment', 'file');
 
 create table module_items (
-  id         uuid primary key default gen_random_uuid(),
-  module_id  uuid not null references modules(id) on delete cascade,
-  kind       item_kind not null,
-  title      text not null,
-  body       text,          -- page content
-  url        text,          -- video or external link
-  duration   text,          -- '6 min'
-  ref_id     uuid,          -- points at assignments.id or quizzes.id
-  position   int not null default 0
+  id        uuid primary key default gen_random_uuid(),
+  module_id uuid not null references modules(id) on delete cascade,
+  kind      item_kind not null,
+  title     text not null,
+  body      text,          -- page content
+  url       text,          -- video or external link
+  duration  text,          -- '6 min'
+  ref_id    uuid,          -- points at assignments.id or quizzes.id
+  position  int not null default 0
 );
 
 create index on module_items (module_id);
@@ -230,7 +310,6 @@ create table submissions (
   submitted_at  timestamptz,
   is_late       boolean not null default false,
 
-  -- grading
   score         numeric(5,2),
   rubric_scores jsonb,       -- [{"criterion":"...","score":7,"max":8}]
   feedback      text,
@@ -258,7 +337,7 @@ create table quizzes (
   time_limit_min   int,
   attempts_allowed int  not null default 3,
   randomise        boolean not null default false,
-  questions_to_ask int,          -- when randomising, how many to draw
+  questions_to_ask int,
   is_published     boolean not null default false,
   created_at       timestamptz not null default now()
 );
@@ -267,8 +346,7 @@ create index on quizzes (course_id);
 
 create type question_kind as enum ('numeric', 'multiple_choice', 'true_false', 'short_answer');
 
--- IMPORTANT: correct answers live here, and students must never
--- be able to read this table directly. See the policy below.
+-- Correct answers live here. Students must never read this table.
 create table quiz_questions (
   id             uuid primary key default gen_random_uuid(),
   quiz_id        uuid not null references quizzes(id) on delete cascade,
@@ -286,7 +364,7 @@ create table quiz_attempts (
   quiz_id      uuid not null references quizzes(id) on delete cascade,
   student_id   uuid not null references profiles(id) on delete cascade,
   attempt_no   int  not null,
-  answers      jsonb not null default '{}',   -- {"question_id": "given answer"}
+  answers      jsonb not null default '{}',
   score        numeric(5,2),
   max_score    numeric(5,2),
   started_at   timestamptz not null default now(),
@@ -302,13 +380,13 @@ create index on quiz_attempts (student_id);
 -- ============================================================
 
 create table messages (
-  id          uuid primary key default gen_random_uuid(),
-  course_id   uuid references courses(id) on delete set null,
-  sender_id   uuid not null references profiles(id) on delete cascade,
+  id           uuid primary key default gen_random_uuid(),
+  course_id    uuid references courses(id) on delete set null,
+  sender_id    uuid not null references profiles(id) on delete cascade,
   recipient_id uuid not null references profiles(id) on delete cascade,
-  body        text not null,
-  read_at     timestamptz,
-  sent_at     timestamptz not null default now()
+  body         text not null,
+  read_at      timestamptz,
+  sent_at      timestamptz not null default now()
 );
 
 create index on messages (recipient_id, read_at);
@@ -349,13 +427,12 @@ create index on discussion_replies (discussion_id);
 -- ============================================================
 -- ROW LEVEL SECURITY
 --
--- This is the part that actually protects student data.
--- The KAYE front end runs in the browser, where anyone can
--- read the code and change what it asks for. These policies
--- mean the database itself refuses to hand over rows the
--- signed in person is not entitled to, no matter what is asked.
+-- This is what actually protects student data. The KAYE front end
+-- runs in the browser, where anyone can read the code and change
+-- what it asks for. These policies mean the database itself refuses
+-- to hand over rows the signed in person is not entitled to.
 --
--- Nothing below is optional.
+-- None of this is optional.
 -- ============================================================
 
 alter table institutions        enable row level security;
@@ -376,7 +453,6 @@ alter table discussions         enable row level security;
 alter table discussion_replies  enable row level security;
 
 
--- institutions: you can see your own school. Only admins change it.
 create policy inst_read on institutions for select
   using (id = my_institution());
 create policy inst_write on institutions for all
@@ -384,8 +460,6 @@ create policy inst_write on institutions for all
   with check (id = my_institution() and my_role() = 'admin');
 
 
--- profiles: you can always read your own. Staff can read everyone
--- at their school. Only admins can create or delete people.
 create policy prof_read_self on profiles for select
   using (id = auth.uid());
 create policy prof_read_staff on profiles for select
@@ -398,8 +472,6 @@ create policy prof_admin_all on profiles for all
   with check (institution_id = my_institution() and my_role() = 'admin');
 
 
--- courses: students see courses they are enrolled in, teachers see
--- the ones they teach, admins see all of theirs.
 create policy course_read on courses for select
   using (
     institution_id = my_institution() and (
@@ -414,7 +486,6 @@ create policy course_admin_all on courses for all
   with check (institution_id = my_institution() and my_role() = 'admin');
 
 
--- enrollments: a student sees their own; a teacher sees their class roster.
 create policy enrol_read on enrollments for select
   using (student_id = auth.uid() or teaches(course_id) or my_role() = 'admin');
 create policy enrol_admin on enrollments for all
@@ -428,7 +499,6 @@ create policy attend_write on attendance for all
   with check (teaches(course_id) or my_role() = 'admin');
 
 
--- modules: students only ever see published ones.
 create policy mod_read on modules for select
   using (
     teaches(course_id) or my_role() = 'admin'
@@ -449,7 +519,6 @@ create policy item_write on module_items for all
   with check (exists (select 1 from modules m where m.id = module_id and teaches(m.course_id)));
 
 
--- assignments: students see published ones for their courses.
 create policy asg_read on assignments for select
   using (
     teaches(course_id) or my_role() = 'admin'
@@ -459,9 +528,6 @@ create policy asg_write on assignments for all
   using (teaches(course_id)) with check (teaches(course_id));
 
 
--- submissions: a student can read and write only their own, and only
--- while it is not yet graded. A teacher can read and grade any
--- submission for a course they teach.
 create policy sub_read_own on submissions for select
   using (student_id = auth.uid());
 create policy sub_read_teacher on submissions for select
@@ -484,7 +550,6 @@ create policy sub_update_teacher on submissions for update
                       where a.id = assignment_id and teaches(a.course_id)));
 
 
--- quizzes
 create policy quiz_read on quizzes for select
   using (
     teaches(course_id) or my_role() = 'admin'
@@ -493,9 +558,9 @@ create policy quiz_read on quizzes for select
 create policy quiz_write on quizzes for all
   using (teaches(course_id)) with check (teaches(course_id));
 
--- quiz_questions holds the correct answers, so ONLY teachers may read it.
--- Students must never select from this table. Marking happens in the
--- database function below, which checks answers without revealing them.
+-- quiz_questions holds the correct answers, so only teachers may read it.
+-- Marking happens in submit_quiz_attempt() below, which checks answers
+-- without revealing them.
 create policy qq_teacher_only on quiz_questions for all
   using (exists (select 1 from quizzes q where q.id = quiz_id and teaches(q.course_id)))
   with check (exists (select 1 from quizzes q where q.id = quiz_id and teaches(q.course_id)));
@@ -509,7 +574,6 @@ create policy qa_insert_own on quiz_attempts for insert
                           where q.id = quiz_id and enrolled_in(q.course_id)));
 
 
--- messages: you can read what you sent or received, and only send as yourself.
 create policy msg_read on messages for select
   using (sender_id = auth.uid() or recipient_id = auth.uid());
 create policy msg_send on messages for insert
@@ -518,8 +582,6 @@ create policy msg_mark_read on messages for update
   using (recipient_id = auth.uid()) with check (recipient_id = auth.uid());
 
 
--- announcements: school wide ones for everyone at the school,
--- course ones only for that course.
 create policy ann_read on announcements for select
   using (
     institution_id = my_institution()
@@ -530,7 +592,6 @@ create policy ann_write on announcements for all
   with check (my_role() in ('teacher','admin') and institution_id = my_institution());
 
 
--- discussions
 create policy disc_read on discussions for select
   using (enrolled_in(course_id) or teaches(course_id) or my_role() = 'admin');
 create policy disc_write on discussions for insert
@@ -548,9 +609,9 @@ create policy reply_write on discussion_replies for insert
 -- ============================================================
 -- Quiz marking, done in the database
 --
--- The correct answers never leave the server. The student's
--- browser sends what they answered and receives only a score
--- and which questions were wrong.
+-- Correct answers never leave the server. The student's browser
+-- sends what they answered and receives a score and which
+-- questions were wrong.
 -- ============================================================
 
 create or replace function submit_quiz_attempt(p_quiz uuid, p_answers jsonb)
@@ -558,14 +619,14 @@ returns jsonb
 language plpgsql security definer set search_path = public
 as $$
 declare
-  v_quiz     quizzes%rowtype;
-  v_used     int;
-  v_correct  int := 0;
-  v_total    int := 0;
-  v_results  jsonb := '[]';
-  q          record;
-  v_given    text;
-  v_ok       boolean;
+  v_quiz    quizzes%rowtype;
+  v_used    int;
+  v_correct int := 0;
+  v_total   int := 0;
+  v_results jsonb := '[]';
+  q         record;
+  v_given   text;
+  v_ok      boolean;
 begin
   select * into v_quiz from quizzes where id = p_quiz;
   if not found then raise exception 'Quiz introuvable'; end if;
@@ -590,7 +651,6 @@ begin
     v_results := v_results || jsonb_build_object(
       'question_id', q.id,
       'correct', v_ok,
-      -- only reveal the right answer once they have used their last attempt
       'correct_answer', case when v_used + 1 >= v_quiz.attempts_allowed
                              then q.correct_answer else null end
     );
@@ -615,18 +675,17 @@ $$;
 -- ============================================================
 -- FILE STORAGE
 --
--- Run this, then create two buckets in the Supabase dashboard
--- under Storage. Both must be PRIVATE, not public:
+-- After running this, create two buckets in the dashboard under
+-- Storage. Both must be PRIVATE, not public:
 --
 --   submissions   student work
 --   briefs        assignment instructions from teachers
 --
--- Paths must follow this shape so the policies below work:
+-- Paths must follow this shape for the policies to work:
 --   submissions/<course_id>/<assignment_id>/<student_id>/<filename>
 --   briefs/<course_id>/<assignment_id>/<filename>
 -- ============================================================
 
--- A student may upload and read only files under their own user id.
 create policy sub_files_own on storage.objects for all
   using (
     bucket_id = 'submissions'
@@ -637,14 +696,12 @@ create policy sub_files_own on storage.objects for all
     and (storage.foldername(name))[3] = auth.uid()::text
   );
 
--- A teacher may read every submission for a course they teach.
 create policy sub_files_teacher on storage.objects for select
   using (
     bucket_id = 'submissions'
     and teaches(((storage.foldername(name))[1])::uuid)
   );
 
--- Anyone on the course may read the assignment brief; teachers may upload it.
 create policy brief_read on storage.objects for select
   using (
     bucket_id = 'briefs'
@@ -657,30 +714,45 @@ create policy brief_write on storage.objects for all
 
 
 -- ============================================================
--- SEED DATA for the pilot classroom
---
--- Creates the school and one course. Create the actual people
--- through Supabase Auth (dashboard, or the signup form), then
--- come back and set the teacher and enroll the students.
+-- CHECK IT WORKED
 -- ============================================================
 
-insert into institutions (name, code)
-values ('Saint-François-Xavier', 'SFXO');
+select 'Tables created: ' || count(*)::text as result
+from information_schema.tables
+where table_schema = 'public';
+-- Expect 16.
 
--- After you have created the teacher's login, run something like:
+
+-- ============================================================
+-- NEXT: set up the pilot classroom
 --
---   insert into courses (institution_id, teacher_id, code, title, room, schedule, capacity)
---   values (
---     (select id from institutions where code = 'SFXO'),
---     '<the teacher uuid from auth.users>',
---     'MATH-102', 'Mathématiques Générales', 'Salle 12',
---     'Lun · Mer · Ven — 08h00', 30
---   );
+-- 1. Go to Authentication then Users, and add two accounts,
+--    ticking Auto Confirm User on each:
+--       teacher@sfxo.edu.ht
+--       student@sfxo.edu.ht
 --
--- Then enroll each student:
+-- 2. Come back here and run the block below to give them their
+--    names and roles, create the course, and enroll the student.
+-- ============================================================
+
+-- update profiles p set role = 'teacher', full_name = 'Dr. Jean-Baptiste'
+-- from auth.users u where u.id = p.id and u.email = 'teacher@sfxo.edu.ht';
 --
---   insert into enrollments (course_id, student_id)
---   values ('<course uuid>', '<student uuid>');
+-- update profiles p set role = 'student', full_name = 'Pam Doe',
+--        student_number = 'SFXO-2026-09'
+-- from auth.users u where u.id = p.id and u.email = 'student@sfxo.edu.ht';
+--
+-- insert into courses (institution_id, teacher_id, code, title, room, schedule)
+-- select i.id, p.id, 'MATH-102', 'Mathématiques Générales',
+--        'Salle 12', 'Lun · Mer · Ven — 08h00'
+-- from institutions i, profiles p
+-- where i.code = 'SFXO' and p.role = 'teacher';
+--
+-- insert into enrollments (course_id, student_id)
+-- select c.id, p.id from courses c, profiles p
+-- where c.code = 'MATH-102' and p.role = 'student';
+--
+-- select full_name, role, student_number from profiles;
 
 
 -- ============================================================
@@ -688,13 +760,13 @@ values ('Saint-François-Xavier', 'SFXO');
 -- ============================================================
 --
 -- 1. Use the anon key in the browser, never the service_role key.
---    The service_role key ignores every policy above. If it ends
---    up in index.html, anyone can read every record in the school.
+--    service_role ignores every policy above. If it ends up in
+--    index.html, anyone can read every record in the school.
 --
 -- 2. Test the policies by signing in as a real student and trying
 --    to reach another student's submission and grade. If anything
---    comes back, fix it before going further. Do this again after
---    every schema change.
+--    comes back, fix it before going further. Repeat after every
+--    schema change.
 --
 -- 3. quiz_questions must stay teacher only. If a student can select
 --    from that table, they can read the answers before answering.
