@@ -64,6 +64,13 @@ tailwind.config = {
   .role-tab.active { background:#fff; color:#241B54; box-shadow:0 1px 2px rgba(0,0,0,.06); }
   .roster-row.active { background:rgba(76,60,156,.08); border-left:3px solid #4C3C9C; }
   .roster-row { border-left:3px solid transparent; }
+  @media (max-width: 1023px) {
+    #app-sidebar { transform: translateX(-100%); }
+    #app-sidebar.open { transform: translateX(0); }
+  }
+  @supports (padding: env(safe-area-inset-bottom)) {
+    body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  }
 </style>
 </head>
 <body class="bg-white text-slatePrimary font-sans antialiased">
@@ -194,10 +201,14 @@ tailwind.config = {
 </div>
 
 <!-- ==================== APPLICATION ==================== -->
-<div id="screen-app" class="hidden h-screen overflow-hidden flex">
-  <aside class="w-64 bg-white border-r border-borderLight flex flex-col justify-between h-full shrink-0">
+<div id="screen-app" class="hidden h-screen overflow-hidden flex relative">
+  <div id="sidebar-overlay" onclick="closeSidebar()" class="hidden fixed inset-0 bg-black/40 z-40 lg:hidden" aria-hidden="true"></div>
+  <aside id="app-sidebar" class="fixed lg:static inset-y-0 left-0 z-50 w-64 max-w-[min(16rem,85vw)] bg-white border-r border-borderLight flex flex-col justify-between h-full shrink-0 transition-transform duration-200 ease-in-out shadow-xl lg:shadow-none">
     <div class="overflow-y-auto">
-      <div class="p-6 border-b border-borderLight">
+      <div class="p-6 border-b border-borderLight relative">
+        <button onclick="closeSidebar()" class="lg:hidden absolute top-4 right-4 p-1.5 rounded-lg hover:bg-slate-100 text-slateSecondary" aria-label="Fermer le menu">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
         <div class="flex items-center space-x-3 mb-2">
           <svg class="h-9 w-9 shrink-0" viewBox="0 0 200 200">
             <polygon points="100,38 38,172 97,172" fill="#4C3C9C"/><polygon points="100,38 103,172 162,172" fill="#241B54"/>
@@ -225,10 +236,15 @@ tailwind.config = {
     </div>
   </aside>
 
-  <div class="flex-1 flex flex-col h-full overflow-hidden">
-    <header class="h-16 border-b border-borderLight px-6 flex items-center justify-between shrink-0 gap-4">
-      <span id="breadcrumb" class="text-xs font-bold tracking-widest text-slateSecondary uppercase truncate">Saint-François-Xavier (SFXO)</span>
-      <div class="flex items-center gap-3 shrink-0">
+  <div class="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+    <header class="h-14 lg:h-16 border-b border-borderLight px-4 lg:px-6 flex items-center justify-between shrink-0 gap-2 lg:gap-4">
+      <div class="flex items-center gap-2 min-w-0 flex-1">
+        <button onclick="toggleSidebar()" class="lg:hidden p-2 -ml-1 rounded-lg hover:bg-slate-100 shrink-0" aria-label="Menu">
+          <svg class="h-5 w-5 text-slatePrimary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <span id="breadcrumb" class="text-[10px] sm:text-xs font-bold tracking-widest text-slateSecondary uppercase truncate">Saint-François-Xavier (SFXO)</span>
+      </div>
+      <div class="flex items-center gap-2 lg:gap-3 shrink-0">
         <div class="relative hidden md:block">
           <input id="global-search" oninput="runGlobalSearch(this.value)" onfocus="runGlobalSearch(this.value)" type="text" placeholder="Rechercher…" class="w-56 pl-8 pr-3 py-1.5 border border-borderLight rounded-lg text-xs focus:outline-none focus:border-kayeVioletLight"/>
           <svg class="h-4 w-4 absolute left-2.5 top-2 text-slateSecondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-5.2-5.2M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -246,7 +262,7 @@ tailwind.config = {
     </header>
     <div class="h-1 w-full bg-gradient-to-r from-kayeVioletLight via-kayeOrange to-kayeVioletDark shrink-0"></div>
 
-    <div id="notif-panel" class="hidden absolute right-6 top-20 w-80 bg-white border border-borderLight rounded-xl shadow-lg z-40 max-h-96 overflow-y-auto"></div>
+    <div id="notif-panel" class="hidden fixed lg:absolute inset-x-4 lg:inset-x-auto right-auto lg:right-6 top-[3.75rem] lg:top-20 w-auto lg:w-80 bg-white border border-borderLight rounded-xl shadow-lg z-40 max-h-96 overflow-y-auto"></div>
 
     <main id="page" class="flex-1 overflow-y-auto"></main>
   </div>
@@ -981,7 +997,21 @@ function renderNav(){
   el('role-tag').textContent = ROLE_LABEL[ROLE][LANG==='fr'?0:1];
 }
 function toGradeCount(){ return (myRoster()||[]).filter(s=>s.submitted&&s.score===null).length; }
-function go(r){ route=r; el('notif-panel').classList.add('hidden'); el('search-results').classList.add('hidden'); renderNav(); render(); el('page').scrollTop=0; }
+function closeSidebar(){
+  const sb=el('app-sidebar'), ov=el('sidebar-overlay');
+  if(sb) sb.classList.remove('open');
+  if(ov) ov.classList.add('hidden');
+  document.body.classList.remove('overflow-hidden');
+}
+function toggleSidebar(){
+  const sb=el('app-sidebar'), ov=el('sidebar-overlay');
+  if(!sb||!ov) return;
+  const open=!sb.classList.contains('open');
+  sb.classList.toggle('open', open);
+  ov.classList.toggle('hidden', !open);
+  document.body.classList.toggle('overflow-hidden', open);
+}
+function go(r){ route=r; closeSidebar(); el('notif-panel').classList.add('hidden'); el('search-results').classList.add('hidden'); renderNav(); render(); el('page').scrollTop=0; }
 function crumb(s){ el('breadcrumb').textContent = s; }
 
 /* ========== RENDU DES PAGES ========== */
@@ -995,7 +1025,7 @@ function render(){
   const admin = { dashboard:aDashboard, people:pagePeople, users:aUsers, enrollments:aEnrollments, courses:aCourses,
     reports:aReports, announcements:pageAnnouncements, integrations:aIntegrations, system:aSystem, settings:pageSettings };
   const map = ROLE==='teacher'?teacher : ROLE==='admin'?admin : student;
-  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-6xl mx-auto fade-in">${(map[route]||map.dashboard)()}</div>`;
+  el('page').innerHTML = `<div class="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto fade-in">${(map[route]||map.dashboard)()}</div>`;
   crumb('Saint-François-Xavier (SFXO)  ·  ' + t(route));
   applyLang();
   if(route==='calendar') buildCalendar();
@@ -1009,16 +1039,16 @@ function backBtn(fn){ return `<button onclick="${fn}" class="text-xs font-bold t
 function pageDashboard(){
   const pend = pendingAssignments().sort((a,b)=>a.due.localeCompare(b.due));
   return `
-  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-kayeVioletDark via-kayeVioletLight to-kayeVioletDark p-8 mb-8">
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-kayeVioletDark via-kayeVioletLight to-kayeVioletDark p-5 sm:p-8 mb-8">
     <svg class="absolute -right-16 -top-16 opacity-15" width="320" height="320" viewBox="0 0 200 200"><polygon points="100,38 38,172 97,172" fill="#fff"/><polygon points="100,38 103,172 162,172" fill="#fff"/></svg>
     <svg class="absolute right-10 bottom-2 opacity-10" width="150" height="150" viewBox="0 0 200 200"><circle cx="100" cy="100" r="90" fill="#FF6A45"/></svg>
     <span class="relative inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-white/15 text-white uppercase tracking-wide mb-3">
       ${LANG==='fr'?'Prochain cours : Mathématiques Générales — dans 2h':'Pwochen klas : Matematik Jeneral — nan 2è'}</span>
-    <h1 class="relative text-3xl font-black text-white">${LANG==='fr'?'Bienvenue, ':'Anbyen vini, '}${STUDENT.name}</h1>
+    <h1 class="relative text-2xl sm:text-3xl font-black text-white">${LANG==='fr'?'Bienvenue, ':'Anbyen vini, '}${STUDENT.name}</h1>
     <p class="relative text-sm text-white/80 mt-1 max-w-md">${LANG==='fr'?'"Vous pouvez le faire !" — Votre espace d\'apprentissage en ligne.':'"Ou kapab fè sa !" — Espas aprantisaj ou an liy.'}</p>
     <div class="relative grid grid-cols-2 md:grid-cols-4 gap-3 mt-7">
       ${[[Object.keys(COURSES).length,t('activeCourses')],[pend.length,t('dueSoon')],[gpaPct()+'%',t('avgProgress')],[unreadCount(),t('unread')]]
-        .map(([v,l])=>`<div class="bg-white/10 rounded-xl p-4 border border-white/10"><span class="block text-3xl font-black text-white">${v}</span><span class="text-xs text-white/70">${l}</span></div>`).join('')}
+        .map(([v,l])=>`<div class="bg-white/10 rounded-xl p-4 border border-white/10"><span class="block text-2xl sm:text-3xl font-black text-white">${v}</span><span class="text-xs text-white/70">${l}</span></div>`).join('')}
     </div>
   </div>
 
@@ -1073,26 +1103,26 @@ function courseCards(){
 function pageCourses(){ return h2(t('courses')) + `<div class="grid grid-cols-1 md:grid-cols-2 gap-5">${courseCards()}</div>`; }
 
 let CK=null, CTAB='modules';
-function openCourse(k){ CK=k; CTAB='modules'; el('page').innerHTML=`<div class="p-6 md:p-8 max-w-6xl mx-auto fade-in">${courseView()}</div>`; crumb('Cours  /  '+COURSES[k].title); applyLang(); el('page').scrollTop=0; }
+function openCourse(k){ CK=k; CTAB='modules'; el('page').innerHTML=`<div class="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto fade-in">${courseView()}</div>`; crumb('Cours  /  '+COURSES[k].title); applyLang(); el('page').scrollTop=0; }
 function courseTab(x){ CTAB=x; openCourseKeepTab(); }
-function openCourseKeepTab(){ el('page').innerHTML=`<div class="p-6 md:p-8 max-w-6xl mx-auto fade-in">${courseView()}</div>`; applyLang(); }
+function openCourseKeepTab(){ el('page').innerHTML=`<div class="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto fade-in">${courseView()}</div>`; applyLang(); }
 function courseView(){
   const c=COURSES[CK];
   const tabs=[['modules',t('modules')],['assignments',t('assignments')],['quizzes',t('quizzes')],['discussions',t('discussions')],['people',t('people')]];
   return `${backBtn("go('courses')")}
   <div class="rounded-2xl overflow-hidden border border-borderLight mb-6">
     <div class="h-2 bg-gradient-to-r ${tintGrad(c.tint)}"></div>
-    <div class="p-6 flex justify-between items-start gap-4">
-      <div class="flex gap-4">
+    <div class="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start gap-4">
+      <div class="flex gap-4 min-w-0">
         <div class="h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${tintBg(c.tint)}"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">${c.icon}</svg></div>
-        <div>
+        <div class="min-w-0">
           <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slateSecondary">${c.code} · ${esc(c.room)}</span>
-          <h3 class="text-xl font-black">${esc(c.title)}</h3>
+          <h3 class="text-lg sm:text-xl font-black">${esc(c.title)}</h3>
           <p class="text-xs text-slateSecondary">${esc(c.prof)} · ${esc(c.schedule)}</p>
           <p class="text-xs text-slateSecondary mt-2 max-w-lg">${esc(c.description)}</p>
         </div>
       </div>
-      <div class="text-right shrink-0">
+      <div class="text-left sm:text-right shrink-0">
         <span class="text-[10px] text-slateSecondary block font-bold uppercase mb-1">${t('gradeNow')}</span>
         <span class="px-3 py-1 rounded-full text-sm font-black ${gradeCls(c.grade)}">${c.grade} · ${c.pct}%</span>
       </div>
@@ -1203,7 +1233,7 @@ function openAssignment(ck,aid){
   const sub=a.mySub;
   const graded=a.status==='graded';
   PENDING_FILE=null;
-  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-6xl mx-auto fade-in">
+  el('page').innerHTML = `<div class="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto fade-in">
     ${backBtn(`openCourse('${ck}');courseTab('assignments')`)}
     <div class="border-b border-borderLight pb-4 mb-6">
       <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slateSecondary">${c.code} — ${esc(c.title)}</span>
@@ -1335,7 +1365,7 @@ function renderQuiz(){
       </div>`; }).join('')}</div>`;
   }
 
-  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-3xl mx-auto fade-in">
+  el('page').innerHTML = `<div class="p-4 sm:p-6 md:p-8 max-w-3xl mx-auto fade-in">
     ${backBtn("openCourse('"+QZ.ck+"');courseTab('quizzes')")}
     <div class="border-b border-borderLight pb-4 mb-6">
       <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slateSecondary">${esc(COURSES[QZ.ck]?COURSES[QZ.ck].code:'')} · ${q.pts} points${q.timeLimit?' · '+q.timeLimit+' min':''}</span>
@@ -1406,7 +1436,7 @@ function pageGrades(){
 }
 function openGradeDetail(k){
   const c=COURSES[k];
-  el('page').innerHTML=`<div class="p-6 md:p-8 max-w-4xl mx-auto fade-in">
+  el('page').innerHTML=`<div class="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto fade-in">
     ${backBtn("go('grades')")}
     <div class="flex justify-between items-start border-b border-borderLight pb-4 mb-6">
       <div><span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slateSecondary">${c.code}</span>
@@ -1484,7 +1514,7 @@ function openConvo(k){
   CONVO=k; const c=CONVOS[k];
   c.msgs.forEach(m=>{ if(m.from==='teacher') m.unread=false; });
   renderNav();
-  el('page').innerHTML=`<div class="p-6 md:p-8 max-w-3xl mx-auto fade-in">
+  el('page').innerHTML=`<div class="p-4 sm:p-6 md:p-8 max-w-3xl mx-auto fade-in">
     ${backBtn("go('inbox')")}
     <div class="border-b border-borderLight pb-4 mb-4 flex items-center gap-3">
       <div class="h-10 w-10 rounded-full bg-kayeVioletLight/10 text-kayeVioletDark font-bold flex items-center justify-center text-sm">${c.initials}</div>
@@ -1500,7 +1530,7 @@ function openConvo(k){
 function drawThread(){
   const c=CONVOS[CONVO];
   el('thread').innerHTML=c.msgs.map(m=>`<div class="flex ${m.from==='student'?'justify-end':'justify-start'}">
-    <div class="msg-${m.from} px-4 py-2 text-sm max-w-xs">${esc(m.text)}</div></div>`).join('');
+    <div class="msg-${m.from} px-4 py-2 text-sm max-w-[85%] sm:max-w-xs">${esc(m.text)}</div></div>`).join('');
 }
 function sendMsg(){
   const i=el('msg-input'); if(!i.value.trim()) return;
@@ -1524,7 +1554,7 @@ function discussionRow(ck,d){
 let TH=null;
 function openThread(ck,did){
   TH={ck,did}; const d=COURSES[ck].discussions.find(x=>x.id===did);
-  el('page').innerHTML=`<div class="p-6 md:p-8 max-w-3xl mx-auto fade-in">
+  el('page').innerHTML=`<div class="p-4 sm:p-6 md:p-8 max-w-3xl mx-auto fade-in">
     ${backBtn("go('discussions')")}
     <div class="border-b border-borderLight pb-4 mb-5">
       <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slateSecondary">${esc(COURSES[ck].title)}</span>
@@ -1562,7 +1592,7 @@ function pageAnnouncements(){
 }
 function openAnnouncement(i){
   const a=ANNOUNCEMENTS[i];
-  el('page').innerHTML=`<div class="p-6 md:p-8 max-w-3xl mx-auto fade-in">
+  el('page').innerHTML=`<div class="p-4 sm:p-6 md:p-8 max-w-3xl mx-auto fade-in">
     ${backBtn("go('announcements')")}
     <h3 class="text-xl font-black mb-1">${esc(a.title)}</h3>
     <p class="text-xs text-slateSecondary mb-5">${esc(a.from)} · ${esc(a.when)}</p>
@@ -1605,7 +1635,7 @@ function toggleRow(l,on){ return `<div class="flex items-center justify-between 
   <div class="toggle-track absolute inset-0 bg-slate-200 rounded-full transition-colors"></div></label></div>`; }
 function openSetting(k){
   if(k==='connexion'){
-    el('page').innerHTML=`<div class="p-6 md:p-8 max-w-2xl mx-auto fade-in">${backBtn("go('settings')")}
+    el('page').innerHTML=`<div class="p-4 sm:p-6 md:p-8 max-w-2xl mx-auto fade-in">${backBtn("go('settings')")}
       <h3 class="text-xl font-black mb-1">Connexion à la base de données</h3>
       <p class="text-xs text-slateSecondary mb-6">Ces informations sont enregistrées dans ce navigateur uniquement.</p>
       <div class="space-y-3">
@@ -1635,7 +1665,7 @@ function openSetting(k){
     <div><label class="block text-xs font-bold text-slateSecondary mb-1">Fuseau horaire</label>
       <select class="w-full px-3 py-2 border border-borderLight rounded-lg text-sm"><option>Amérique / Port-au-Prince</option></select></div>
     <div class="pt-2 border-t border-borderLight">${toggleRow('Mode économie de données',true)}${toggleRow('Texte agrandi',false)}</div></div>`;
-  el('page').innerHTML=`<div class="p-6 md:p-8 max-w-4xl mx-auto fade-in">${backBtn("go('settings')")}
+  el('page').innerHTML=`<div class="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto fade-in">${backBtn("go('settings')")}
     <h3 class="text-xl font-black mb-1">${s[1]}</h3><p class="text-xs text-slateSecondary mb-6">${s[2]}</p>${body}
     <button onclick="toast('Modifications enregistrées.')" class="mt-6 px-5 py-2 rounded-lg bg-kayeVioletLight hover:bg-kayeVioletDark text-white font-bold text-xs transition">Enregistrer</button></div>`;
   crumb('Paramètres  /  '+s[1]); applyLang();
@@ -1742,7 +1772,7 @@ function pagePeople(){
 }
 
 function inviteForm(){
-  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-2xl mx-auto fade-in">
+  el('page').innerHTML = `<div class="p-4 sm:p-6 md:p-8 max-w-2xl mx-auto fade-in">
     ${backBtn("go('people')")}
     <h3 class="text-xl font-black mb-1">Inviter des personnes</h3>
     <p class="text-xs text-slateSecondary mb-4">Une ligne par personne. Seules les personnes de cette liste pourront créer un compte.</p>
@@ -1863,7 +1893,7 @@ function pubToggle(id,on,label,hint){
 /* ---------- Creer / modifier un cours ---------- */
 function courseForm(existing){
   const c = existing ? COURSES[existing] : null;
-  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-2xl mx-auto fade-in">
+  el('page').innerHTML = `<div class="p-4 sm:p-6 md:p-8 max-w-2xl mx-auto fade-in">
     ${backBtn("go('courses')")}
     <h3 class="text-xl font-black mb-1">${c?'Modifier le cours':'Créer un cours'}</h3>
     <p class="text-xs text-slateSecondary mb-6">${c?'Mettez à jour les informations de ce cours.':'Renseignez votre classe. Vous ajouterez les modules ensuite.'}</p>
@@ -1871,7 +1901,7 @@ function courseForm(existing){
       ${fieldRow('cf-code','Code du cours', c&&c.code, 'text', 'MATH-102')}
       ${fieldRow('cf-title','Titre', c&&c.title, 'text', 'Mathématiques Générales')}
       ${areaRow('cf-desc','Description', c&&c.description, 'De quoi parle ce cours ?')}
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         ${fieldRow('cf-room','Salle', c&&c.room, 'text', 'Salle 12')}
         ${fieldRow('cf-cap','Places', (c&&c.capacity)||30, 'number')}
       </div>
@@ -1949,7 +1979,7 @@ async function duplicateCourse(id){
 /* ---------- Modules ---------- */
 function moduleForm(courseId, moduleId){
   const m = moduleId ? MODULE_BY_ID[moduleId] : null;
-  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-2xl mx-auto fade-in">
+  el('page').innerHTML = `<div class="p-4 sm:p-6 md:p-8 max-w-2xl mx-auto fade-in">
     ${backBtn("tOpenCourse('"+courseId+"')")}
     <h3 class="text-xl font-black mb-1">${m?'Modifier le module':'Ajouter un module'}</h3>
     <p class="text-xs text-slateSecondary mb-6">Un module regroupe une partie du programme. Vous ajouterez son contenu ensuite.</p>
@@ -2028,7 +2058,7 @@ const ITEM_KINDS = [
 function itemForm(courseId, moduleId, itemId){
   const it = itemId ? ITEM_BY_ID[itemId] : null;
   const m  = MODULE_BY_ID[moduleId];
-  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-2xl mx-auto fade-in">
+  el('page').innerHTML = `<div class="p-4 sm:p-6 md:p-8 max-w-2xl mx-auto fade-in">
     ${backBtn("tOpenCourse('"+courseId+"')")}
     <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slateSecondary">${esc(m?m.title:'')}</span>
     <h3 class="text-xl font-black mb-1">${it?'Modifier l\'élément':'Ajouter au module'}</h3>
@@ -2101,13 +2131,13 @@ const Q_KINDS = [
 
 function quizForm(courseId, quizId){
   const q = quizId ? QUIZ_BY_ID[quizId] : null;
-  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-2xl mx-auto fade-in">
+  el('page').innerHTML = `<div class="p-4 sm:p-6 md:p-8 max-w-2xl mx-auto fade-in">
     ${backBtn("tOpenCourse('"+courseId+"')")}
     <h3 class="text-xl font-black mb-1">${q?'Modifier le quiz':'Créer un quiz'}</h3>
     <p class="text-xs text-slateSecondary mb-6">Les questions s'ajoutent ensuite, une par une ou en bloc.</p>
     <div class="space-y-4">
       ${fieldRow('qf-title','Titre du quiz', q&&q.title, 'text', 'Quiz 1 : Les dérivées')}
-      <div class="grid grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         ${fieldRow('qf-pts','Points', q?q.points:10, 'number')}
         ${fieldRow('qf-time','Durée (min)', q&&q.time_limit_min, 'number', 'illimité')}
         ${fieldRow('qf-att','Tentatives', q?q.attempts_allowed:3, 'number')}
@@ -2190,7 +2220,7 @@ async function duplicateQuiz(courseId, id){
 function quizEditor(courseId, quizId){
   const q=QUIZ_BY_ID[quizId];
   const qs=(QUESTIONS_BY_QUIZ[quizId]||[]).slice().sort((a,b)=>a.position-b.position);
-  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-3xl mx-auto fade-in">
+  el('page').innerHTML = `<div class="p-4 sm:p-6 md:p-8 max-w-3xl mx-auto fade-in">
     ${backBtn("tOpenCourse('"+courseId+"')")}
     <div class="flex justify-between items-start border-b border-borderLight pb-4 mb-6 gap-3">
       <div><h3 class="text-xl font-black">${esc(q?q.title:'Quiz')}</h3>
@@ -2237,7 +2267,7 @@ function questionForm(courseId, quizId, qid){
   const x = qid ? (QUESTIONS_BY_QUIZ[quizId]||[]).find(z=>z.id===qid) : null;
   const kind = x ? x.kind : 'multiple_choice';
   const choices = x && x.choices ? x.choices.join('\n') : '';
-  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-2xl mx-auto fade-in">
+  el('page').innerHTML = `<div class="p-4 sm:p-6 md:p-8 max-w-2xl mx-auto fade-in">
     ${backBtn("quizEditor('"+courseId+"','"+quizId+"')")}
     <h3 class="text-xl font-black mb-1">${x?'Modifier la question':'Nouvelle question'}</h3>
     <p class="text-xs text-slateSecondary mb-6">La bonne réponse n'est jamais envoyée au navigateur de l'élève.</p>
@@ -2317,7 +2347,7 @@ async function moveQuestion(courseId, quizId, qid, dir){
 
 /* ---------- Import en bloc ---------- */
 function bulkQuestionForm(courseId, quizId){
-  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-2xl mx-auto fade-in">
+  el('page').innerHTML = `<div class="p-4 sm:p-6 md:p-8 max-w-2xl mx-auto fade-in">
     ${backBtn("quizEditor('"+courseId+"','"+quizId+"')")}
     <h3 class="text-xl font-black mb-1">Importer des questions</h3>
     <p class="text-xs text-slateSecondary mb-4">Une question par ligne. La bonne réponse se marque avec une étoile.</p>
@@ -2372,13 +2402,13 @@ async function saveBulkQuestions(courseId, quizId){
 ------------------------------------------------- */
 function aiQuizForm(courseId, quizId){
   const c=COURSES[courseId];
-  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-2xl mx-auto fade-in">
+  el('page').innerHTML = `<div class="p-4 sm:p-6 md:p-8 max-w-2xl mx-auto fade-in">
     ${backBtn("quizEditor('"+courseId+"','"+quizId+"')")}
     <h3 class="text-xl font-black mb-1">Générer des questions avec l'IA</h3>
     <p class="text-xs text-slateSecondary mb-6">L'IA propose un premier jet. Vous relisez et corrigez avant de publier.</p>
     <div class="space-y-4">
       ${areaRow('ai-topic','Sujet', c?c.title:'', 'Les dérivées : règles de base et applications', 3)}
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         ${fieldRow('ai-count','Nombre de questions', 5, 'number')}
         <div><label class="block text-xs font-bold text-slateSecondary mb-1">Niveau</label>
           <select id="ai-level" class="w-full px-3 py-2 border border-borderLight rounded-lg text-sm">
@@ -2542,7 +2572,7 @@ function subStatusPill(st, late){
 function assignmentForm(courseId, assignmentId){
   const a = assignmentId ? ASSIGNMENT_BY_ID[assignmentId] : null;
   const due = a && a.due_at ? a.due_at.slice(0,16) : '';
-  el('page').innerHTML = `<div class="p-6 md:p-8 max-w-2xl mx-auto fade-in">
+  el('page').innerHTML = `<div class="p-4 sm:p-6 md:p-8 max-w-2xl mx-auto fade-in">
     ${backBtn("tOpenCourse('"+courseId+"')")}
     <h3 class="text-xl font-black mb-1">${a?'Modifier le devoir':'Créer un devoir'}</h3>
     <p class="text-xs text-slateSecondary mb-6">Les élèves le verront dès qu'il sera publié.</p>
@@ -2550,7 +2580,7 @@ function assignmentForm(courseId, assignmentId){
       ${fieldRow('af-title','Titre du devoir', a&&a.title, 'text', 'Devoir #1 : ...')}
       ${areaRow('af-inst','Consignes', a&&a.instructions,
         "Ce que les élèves doivent faire, et sous quelle forme rendre le travail.", 5)}
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         ${fieldRow('af-pts','Points', (a&&a.points)!==undefined&&a?a.points:20, 'number')}
         ${fieldRow('af-due','À rendre le', due, 'datetime-local')}
       </div>
@@ -2625,16 +2655,16 @@ async function duplicateAssignment(courseId, id){
 /* ============================================================
    ESPACE ENSEIGNANT
    ============================================================ */
-function statPill(v,l,color){ return `<div class="bg-white/10 rounded-xl p-4 border border-white/10"><span class="block text-3xl font-black text-white">${v}</span><span class="text-xs text-white/70">${l}</span></div>`; }
+function statPill(v,l,color){ return `<div class="bg-white/10 rounded-xl p-4 border border-white/10"><span class="block text-2xl sm:text-3xl font-black text-white">${v}</span><span class="text-xs text-white/70">${l}</span></div>`; }
 function tDashboard(){
   const r=myRoster();
   const avg=r.length?Math.round(r.reduce((s,x)=>s+(x.avg||0),0)/r.length):0;
   const risk=r.filter(x=>x.risk);
   return `
-  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-kayeVioletDark via-kayeVioletLight to-kayeVioletDark p-8 mb-8">
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-kayeVioletDark via-kayeVioletLight to-kayeVioletDark p-5 sm:p-8 mb-8">
     <svg class="absolute -right-16 -top-16 opacity-15" width="320" height="320" viewBox="0 0 200 200"><polygon points="100,38 38,172 97,172" fill="#fff"/><polygon points="100,38 103,172 162,172" fill="#fff"/></svg>
     <span class="relative inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-white/15 text-white uppercase tracking-wide mb-3">${LANG==='fr'?'Prochain cours : MATH-102 — dans 2h · Salle 12':'Pwochen klas : MATH-102 — nan 2è · Sal 12'}</span>
-    <h1 class="relative text-3xl font-black text-white">${LANG==='fr'?'Bonjour, ':'Bonjou, '}${TEACHER.name}</h1>
+    <h1 class="relative text-2xl sm:text-3xl font-black text-white">${LANG==='fr'?'Bonjour, ':'Bonjou, '}${TEACHER.name}</h1>
     <p class="relative text-sm text-white/80 mt-1">${LANG==='fr'?'Vous avez '+toGradeCount()+' copies à corriger aujourd’hui.':'Ou gen '+toGradeCount()+' kopi pou korije jodi a.'}</p>
     <div class="relative grid grid-cols-2 md:grid-cols-4 gap-3 mt-7">
       ${statPill(r.length,LANG==='fr'?'Élèves inscrits':'Elèv enskri')}
@@ -2874,15 +2904,15 @@ function tDrawCourse(){
   if(TTAB==='discussions'){
     body = c.discussions.length ? `<div class="space-y-3">${c.discussions.map(d=>discussionRow(TCK,d)).join('')}</div>` : `<p class="text-xs text-slateSecondary">${t('noItems')}</p>`;
   }
-  el('page').innerHTML=`<div class="p-6 md:p-8 max-w-6xl mx-auto fade-in">
+  el('page').innerHTML=`<div class="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto fade-in">
     ${backBtn("go('courses')")}
     <div class="rounded-2xl overflow-hidden border border-borderLight mb-6">
       <div class="h-2 bg-gradient-to-r ${tintGrad(c.tint)}"></div>
-      <div class="p-6 flex justify-between items-start gap-4">
-        <div><span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slateSecondary">${c.code} · ${esc(c.room)}</span>
-          <h3 class="text-xl font-black">${esc(c.title)}</h3><p class="text-xs text-slateSecondary">${esc(c.schedule)} · ${r.length} élèves</p></div>
-        <div class="text-right shrink-0">
-          <div class="flex gap-1.5 justify-end mb-2">
+      <div class="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start gap-4">
+        <div class="min-w-0"><span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slateSecondary">${c.code} · ${esc(c.room)}</span>
+          <h3 class="text-lg sm:text-xl font-black">${esc(c.title)}</h3><p class="text-xs text-slateSecondary">${esc(c.schedule)} · ${r.length} élèves</p></div>
+        <div class="text-left sm:text-right shrink-0 w-full sm:w-auto">
+          <div class="flex flex-wrap gap-1.5 sm:justify-end mb-2">
             <button onclick="courseForm('${TCK}')" class="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-borderLight hover:border-kayeVioletLight">Modifier</button>
             <button onclick="archiveCourse('${TCK}',true)" class="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-borderLight text-slateSecondary">Archiver</button>
             <button onclick="deleteCourse('${TCK}')" class="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-rose-200 text-rose-600">Supprimer</button>
@@ -3195,7 +3225,7 @@ function tAnalytics(){
   const bands=[['16–20',r.filter(s=>s.avg>=80).length],['12–15',r.filter(s=>s.avg>=60&&s.avg<80).length],['0–11',r.filter(s=>s.avg<60).length]];
   const max=Math.max(...bands.map(b=>b[1]),1);
   return h2(t('analytics')+' — MATH-102') + `
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
     ${[[ (r.length?Math.round(r.reduce((s,x)=>s+(x.avg||0),0)/r.length)+'%':'—'),'Moyenne de classe'],[ (r.length?Math.round(r.reduce((s,x)=>s+(x.attendance||0),0)/r.length)+'%':'—'),'Présence moyenne'],
       [r.filter(s=>s.submitted).length+'/'+r.length,'Taux de soumission'],[r.filter(s=>s.risk).length,'Élèves à risque']]
       .map(([v,l])=>`<div class="bg-slate-50 rounded-xl p-4"><span class="block text-2xl font-black">${v}</span><span class="text-xs text-slateSecondary">${l}</span></div>`).join('')}
@@ -3225,10 +3255,10 @@ function aDashboard(){
   const students=USERS.filter(u=>u.role==='Étudiant').length, teachers=USERS.filter(u=>u.role==='Enseignant').length;
   const seats=ENROLLMENTS.reduce((s,e)=>s+e.capacity,0), filled=ENROLLMENTS.reduce((s,e)=>s+e.students,0);
   return `
-  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-kayeVioletDark via-kayeVioletLight to-kayeVioletDark p-8 mb-8">
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-kayeVioletDark via-kayeVioletLight to-kayeVioletDark p-5 sm:p-8 mb-8">
     <svg class="absolute -right-16 -top-16 opacity-15" width="320" height="320" viewBox="0 0 200 200"><polygon points="100,38 38,172 97,172" fill="#fff"/><polygon points="100,38 103,172 162,172" fill="#fff"/></svg>
     <span class="relative inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-white/15 text-white uppercase tracking-wide mb-3">Automne 2026 · Semaine 4</span>
-    <h1 class="relative text-3xl font-black text-white">${LANG==='fr'?'Console administrateur':'Konsòl administratè'}</h1>
+    <h1 class="relative text-2xl sm:text-3xl font-black text-white">${LANG==='fr'?'Console administrateur':'Konsòl administratè'}</h1>
     <p class="relative text-sm text-white/80 mt-1">Saint-François-Xavier (SFXO)</p>
     <div class="relative grid grid-cols-2 md:grid-cols-4 gap-3 mt-7">
       ${statPill(students,LANG==='fr'?'Étudiants':'Elèv')}${statPill(teachers,LANG==='fr'?'Enseignants':'Pwofesè')}
@@ -3299,7 +3329,7 @@ function aUsers(){
 }
 function openUser(email){
   const u=USERS.find(x=>x.email===email);
-  el('page').innerHTML=`<div class="p-6 md:p-8 max-w-3xl mx-auto fade-in">${backBtn("go('users')")}
+  el('page').innerHTML=`<div class="p-4 sm:p-6 md:p-8 max-w-3xl mx-auto fade-in">${backBtn("go('users')")}
     <div class="flex items-center gap-4 border-b border-borderLight pb-5 mb-6">
       <div class="h-14 w-14 rounded-full bg-kayeVioletLight text-white font-black flex items-center justify-center text-lg">${u.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
       <div><h3 class="text-xl font-black">${esc(u.name)}</h3><p class="text-xs text-slateSecondary">${esc(u.role)} · ${esc(u.email)} · ${esc(u.id)}</p></div>
@@ -3361,7 +3391,7 @@ function aReports(){
     ${['Rapport de notes','Rapport de présence','Taux de soumission','Activité des connexions'].map(r=>`
       <button onclick="toast('${r} généré en PDF.')" class="px-4 py-2 rounded-lg border border-borderLight font-bold text-xs hover:border-kayeVioletLight">↓ ${r}</button>`).join('')}
   </div>
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
     ${[[attend+'%','Présence moyenne'],[ (students.length?Math.round(students.filter(s=>s.submitted).length/students.length*100)+'%':'—'),'Taux de soumission'],
        [gpaPct()+'%','Moyenne établissement'],[students.filter(s=>s.risk).length,'Élèves à risque']]
       .map(([v,l])=>`<div class="bg-slate-50 rounded-xl p-4"><span class="block text-2xl font-black">${v}</span><span class="text-xs text-slateSecondary">${l}</span></div>`).join('')}
@@ -3400,7 +3430,7 @@ function aIntegrations(){
 }
 function aSystem(){
   return h2(t('system')) + `
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
     ${[['99,8%','Disponibilité (30j)'],['1,4 Go','Stockage utilisé'],['il y a 9h','Dernière sauvegarde'],['v2.4.1','Version']]
       .map(([v,l])=>`<div class="bg-slate-50 rounded-xl p-4"><span class="block text-xl font-black">${v}</span><span class="text-xs text-slateSecondary">${l}</span></div>`).join('')}
   </div>
@@ -3437,6 +3467,8 @@ function aSystem(){
         <span class="text-[10px] text-slateSecondary shrink-0 ml-3">${esc(a.when)}</span></div>`).join('')}
     </div></div>`;
 }
+
+window.addEventListener('resize', ()=>{ if(window.innerWidth>=1024) closeSidebar(); });
 
 applyLang();
 </script>
