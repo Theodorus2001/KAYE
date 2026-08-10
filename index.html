@@ -698,6 +698,7 @@ async function doActivate(e){
 }
 
 async function doLogout(){
+  closeSidebar();
   await db.auth.signOut();
   PROFILE=null;
   el('screen-app').classList.add('hidden');
